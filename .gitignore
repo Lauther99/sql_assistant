@@ -1,0 +1,4 @@
+virtual-enviroments
+src/settings/.env
+src/settings/__pycache__
+src/utils/__pycache__
