@@ -165,7 +165,7 @@ class ChromaDBSetup:
 class ChromaExperimentsDBSetup:
     @staticmethod
     def get_db_path():
-        return Config.get_chromadb_config()["CHROMADB_EXPERIMENTS_DIRECTORY"]
+        return Config.get_experimentsdb_config()["CHROMADB_EXPERIMENTS_DIRECTORY"]
 
     @staticmethod
     def get_experiments_with_llama_collection() -> Collection:
@@ -250,14 +250,16 @@ class HFSettings:
     def get_embeddings_model_mle5() -> str:
         return Config.get_hf_config()["HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"]
 
+
 class Settings:
-    Openai: OpenAISettings
-    Chroma: ChromaDBSetup
-    Sql: SQLSettings
-    Hugging_face: HFSettings
+    Openai = OpenAISettings
+    Chroma = ChromaDBSetup
+    Sql = SQLSettings
+    Hugging_face = HFSettings
+
 
 class Experiments_Settings:
-    Openai: OpenAISettings
-    Chroma: ChromaExperimentsDBSetup
-    Sql: SQLSettings
-    Hugging_face: HFSettings
+    Openai = OpenAISettings
+    Chroma = ChromaExperimentsDBSetup
+    Sql = SQLSettings
+    Hugging_face = HFSettings

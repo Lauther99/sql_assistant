@@ -75,14 +75,14 @@ def string_2_bool(cadena: str):
     return "true" in palabras
 
 # ToDo: Cambiar de sitio, esto no deberia ir aqui, debe ir con los modelos de generacion de respuesta/embeddings!!!!!!! ---------------------------------------------------------------------
-def get_embeddings(
-    input_string: str, openai_model_endpoint: OpenAI, openai_embeddings_model_name: str
-) -> list[float]:
-    """Obtiene embeddings de OpenAI"""
-    response = openai_model_endpoint.embeddings.create(
-        input=input_string, model=openai_embeddings_model_name
-    )
-    return response.data[0].embedding
+# def get_embeddings(
+#     input_string: str, openai_model_endpoint: OpenAI, openai_embeddings_model_name: str
+# ) -> list[float]:
+#     """Obtiene embeddings de OpenAI"""
+#     response = openai_model_endpoint.embeddings.create(
+#         input=input_string, model=openai_embeddings_model_name
+#     )
+#     return response.data[0].embedding
 # ToDo: Cambiar de sitio, esto no deberia ir aqui!!!!!!! ---------------------------------------------------------------------
 
 def sentence_similarity(vector_1: list[float], vector_2: list[float]):

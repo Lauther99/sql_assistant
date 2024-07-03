@@ -6,33 +6,8 @@ from langchain_community.vectorstores.chroma import Chroma
 from chromadb.api.models.Collection import Collection
 from typing import List, Dict, Optional
 from src.utils.utils import clean_sentence
-from src.db.training.excel_functions.excel_functions import read_database_semantics
+from src.document_indexing.data_functions.data_functions import read_database_semantics
 import inspect
-
-
-def find_db_examples(
-    query: str, collection: Chroma, k: int = 3, score_threshold: float = 0.7
-) -> list[tuple[Document, float]]:
-    """For searching examples in chroma langchain collections"""
-
-    examples = collection.similarity_search_with_relevance_scores(
-        query=query, k=k, score_threshold=score_threshold
-    )
-    return examples
-
-
-def find_by_vector_embedding(
-    vector_embedding: list[float],
-    collection: Chroma,
-    k: int = 3,
-    score_threshold: float = 0.7,
-) -> list[tuple[Document, float]]:
-    """For searching examples in chroma langchain collections"""
-
-    r = collection.similarity_search_by_vector_with_relevance_scores(
-        embedding=vector_embedding, k=k, score_threshold=score_threshold
-    )
-    return r
 
 
 def query_by_texts(
@@ -59,12 +34,7 @@ def query_by_texts(
             n_results=n,
             include=["distances", "metadatas"],
         )
-    # results = collection.query(
-    #     query_texts=cleaned_texts,
-    #     n_results=n,
-    #     include=["distances", "metadatas"],
-    # )
-
+    
     data = set()
 
     for distances, metadatas in zip(results["distances"], results["metadatas"]):

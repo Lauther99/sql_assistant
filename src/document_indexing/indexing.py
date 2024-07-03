@@ -8,7 +8,7 @@ from src.document_indexing.data_functions.data_functions import (
     read_database_experiments,
 )
 from src.utils.utils import clean_sentence
-from src.settings.settings import Settings
+from src.settings.settings import Settings, Experiments_Settings
 from src.utils.utils import get_embeddings, clean_technical_term
 from src.components.models.models import (
     Langchain_Model,
@@ -27,25 +27,6 @@ import chromadb
 
 import pandas as pd
 
-import requests
-import time
-
-
-def get_hf_embeddings(payload):
-    API_URL = "https://api-inference.huggingface.co/models/intfloat/multilingual-e5-large-instruct"
-    headers = {"Authorization": "Bearer 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"}
-    json_payload = {
-        "inputs": payload,
-    }
-    vector = requests.post(API_URL, headers=headers, json=json_payload).json()
-    if not isinstance(vector, list) and not all(isinstance(i, float) for i in vector):
-        print("Se esta levantando el modelo de embeddings :D")
-        print(vector)
-        estimated_time = float(vector["estimated_time"])
-        time.sleep(estimated_time + 10)
-        vector = get_hf_embeddings(payload)
-    return vector
-
 
 class DataIndexerAssistant:
     def __init__(self) -> None:
@@ -54,8 +35,16 @@ class DataIndexerAssistant:
         self.init_models()
 
         # Configuracion cliente chromadb
-        self.chromadb_directory = Settings.Chroma.get_db_path()
-        self.chromadb_client = chromadb.PersistentClient(path=self.chromadb_directory)
+        self.chroma_dev_db_path = Settings.Chroma.get_db_path()
+        self.chroma_experiments_db_path = Experiments_Settings.Chroma.get_db_path()
+
+        self.chromadb_client = chromadb.PersistentClient(path=self.chroma_dev_db_path)
+        
+        # TODO PARA EXPERIMENTS
+        # self.chromadb_experiments_client = chromadb.PersistentClient(
+        #     path=self.chroma_experiments_db_path
+        # )
+        # TODO PARA EXPERIMENTS
 
         # Configuracion embeddings functions
         self.openai_embedding_function = OpenAIEmbeddingFunction(
@@ -84,23 +73,23 @@ class DataIndexerAssistant:
             "COLUMNS_DEFINITIONS_COLLECTION": Config.get_chromadb_config()[
                 "COLUMNS_DEFINITIONS_COLLECTION"
             ],
-            "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS": Config.get_chromadb_config()[
-                "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-            ],
-            "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS": Config.get_chromadb_config()[
-                "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-            ],
+            # "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS": Config.get_experimentsdb_config()[
+            #     "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
+            # ],
+            # "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS": Config.get_experimentsdb_config()[
+            #     "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
+            # ],
         }
 
     def init_models(self):
         self.openai_native_model = Openai_Model()
         self.langchain_model = Langchain_Model()
         self.hf_model = HuggingFace_Model()
-        
+
         self.openai_native_model.init_model()
         self.langchain_model.init_model()
         self.hf_model.init_model()
-    
+
     def delete_specific_collection(self) -> None:
         collection_names = {
             self.collection_names[
@@ -128,16 +117,16 @@ class DataIndexerAssistant:
             ]: lambda: self._delete_collection(
                 self.collection_names["COLUMNS_DEFINITIONS_COLLECTION"]
             ),
-            self.collection_names[
-                "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-            ]: lambda: self._delete_collection(
-                self.collection_names["EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"]
-            ),
-            self.collection_names[
-                "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-            ]: lambda: self._delete_collection(
-                self.collection_names["EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"]
-            ),
+            # self.collection_names[
+            #     "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
+            # ]: lambda: self._delete_collection(
+            #     self.collection_names["EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"]
+            # ),
+            # self.collection_names[
+            #     "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
+            # ]: lambda: self._delete_collection(
+            #     self.collection_names["EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"]
+            # ),
         }
         print("Selecciona una colección:")
         for i, collection_name in enumerate(collection_names):
@@ -165,7 +154,7 @@ class DataIndexerAssistant:
         collection = self.chromadb_client.get_or_create_collection(
             name=collection_name, embedding_function=embedding_function
         )
-        
+
         collection.add(embeddings=embeddings, metadatas=metadatas, ids=ids)
 
     def index_with_documents(
@@ -179,9 +168,8 @@ class DataIndexerAssistant:
         collection = self.chromadb_client.get_or_create_collection(
             name=collection_name, embedding_function=embedding_function
         )
-        
+
         collection.add(documents=documents, metadatas=metadatas, ids=ids)
-            
 
     # Training collections
 
@@ -193,7 +181,9 @@ class DataIndexerAssistant:
         ids = []
         for index, row in excel_data.iterrows():
             processed_word = clean_sentence(row["input"])
-            new_embedding: list[float] = self.openai_native_model.get_embeddings(processed_word)
+            new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                processed_word
+            )
             # new_embedding: list[float] = get_embeddings(
             #     processed_word,
             #     self.openai_model,
@@ -213,7 +203,7 @@ class DataIndexerAssistant:
             embeddings=vectors,
             ids=ids,
             metadatas=metadatas,
-            embedding_function=self.openai_embedding_function
+            embedding_function=self.openai_embedding_function,
         )
         print("Colección classifier entrenada!")
 
@@ -225,7 +215,9 @@ class DataIndexerAssistant:
         ids = []
         for index, row in excel_data.iterrows():
             processed_word = clean_sentence(row["questions"])
-            new_embedding: list[float] = self.openai_native_model.get_embeddings(processed_word)
+            new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                processed_word
+            )
             # new_embedding: list[float] = get_embeddings(
             #     processed_word,
             #     self.openai_model,
@@ -244,7 +236,7 @@ class DataIndexerAssistant:
             embeddings=vectors,
             ids=ids,
             metadatas=metadatas,
-            embedding_function=self.openai_embedding_function
+            embedding_function=self.openai_embedding_function,
         )
         print("Colección sql_examples entrenada!")
 
@@ -256,7 +248,9 @@ class DataIndexerAssistant:
         ids = []
         for index, row in excel_data.iterrows():
             processed_word = clean_sentence(row["semantic_table_description"])
-            new_embedding: list[float] = self.openai_native_model.get_embeddings(processed_word)
+            new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                processed_word
+            )
             # new_embedding: list[float] = get_embeddings(
             #     # row["semantic_table_description"],
             #     processed_word,
@@ -276,7 +270,7 @@ class DataIndexerAssistant:
             embeddings=vectors,
             ids=ids,
             metadatas=metadatas,
-            embedding_function=self.openai_embedding_function
+            embedding_function=self.openai_embedding_function,
         )
         print("Colección table_definitions entrenada!")
 
@@ -306,7 +300,9 @@ class DataIndexerAssistant:
         for index, row in excel_df.iterrows():
             if not pd.isna(row["semantic_table_relation"]):
                 # processed_word = clean_sentence(row["semantic_table_relation"])
-                new_embedding: list[float] = self.openai_native_model.get_embeddings(row["semantic_table_relation"])
+                new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                    row["semantic_table_relation"]
+                )
                 # new_embedding: list[float] = get_embeddings(
                 #     row["semantic_table_relation"],
                 #     # processed_word,
@@ -364,7 +360,7 @@ class DataIndexerAssistant:
             embeddings=vectors,
             ids=ids,
             metadatas=metadatas,
-            embedding_function=self.openai_embedding_function
+            embedding_function=self.openai_embedding_function,
         )
         print("Colección relations_definitions entrenada!")
 
@@ -387,7 +383,9 @@ class DataIndexerAssistant:
         for index, row in excel_df.iterrows():
             if not pd.isna(row["semantic_column"]):
                 # processed_word = clean_sentence(row["semantic_table_relation"])
-                new_embedding: list[float] = self.openai_native_model.get_embeddings(row["semantic_column"])
+                new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                    row["semantic_column"]
+                )
                 # new_embedding: list[float] = get_embeddings(
                 #     row["semantic_column"],
                 #     # processed_word,
@@ -428,116 +426,120 @@ class DataIndexerAssistant:
             embeddings=vectors,
             ids=ids,
             metadatas=metadatas,
-            embedding_function=self.openai_embedding_function
+            embedding_function=self.openai_embedding_function,
         )
         print("Colección columns_definitions entrenada!")
 
-    def train_openai_experiments_collection(self):
-        # Leyendo el diccionario del excel
-        excel_data = read_database_experiments(
-            sheet_name="bussiness_semantics",
-            cols=[
-                "semantic_term_description",
-                "meta_term",
-                "meta_table_name",
-                "meta_terms_definitions",
-                "meta_terms_replacements",
-                "meta_sql_advices",
-            ],
-        )
-        vectors = []
-        metadatas = []
-        ids = []
-        for index, row in excel_data.iterrows():
-            processed_word = clean_technical_term(row["semantic_term_description"])
-            new_embedding: list[float] = self.openai_native_model.get_embeddings(processed_word)
-            # new_embedding: list[float] = get_embeddings(
-            #     processed_word,
-            #     self.openai_model,
-            #     self.settings.openai.embeddings_model,
-            # )
-            # new_embedding = get_hf_embeddings(processed_word)
-            vectors.append(new_embedding)
-            metadatas.append(
-                {
-                    "meta_term": row["meta_term"],
-                    "meta_table_name": row["meta_table_name"],
-                    "meta_terms_definitions": (
-                        " "
-                        if pd.isna(row["meta_terms_definitions"])
-                        else row["meta_terms_definitions"]
-                    ),
-                    "meta_terms_replacements": (
-                        " "
-                        if pd.isna(row["meta_terms_replacements"])
-                        else row["meta_terms_replacements"]
-                    ),
-                }
-            )
-            ids.append(f"id_experiments_col_{index}")
-        self.index_with_vectors(
-            collection_name=self.collection_names[
-                "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-            ],
-            embeddings=vectors,
-            ids=ids,
-            metadatas=metadatas,
-            embedding_function=self.openai_embedding_function
-        )
-        print("Colección openai_experiments entrenada!")
+    # TODO PARA EXPERIMENTS
 
-    def train_llama_experiments_collection(self):
-        # Leyendo el diccionario del excel
-        excel_data = read_database_experiments(
-            sheet_name="bussiness_semantics",
-            cols=[
-                "semantic_term_description",
-                "meta_term",
-                "meta_table_name",
-                "meta_terms_definitions",
-                "meta_terms_replacements",
-                "meta_sql_advices",
-            ],
-        )
-        documents = []
-        metadatas = []
-        ids = []
-        for index, row in excel_data.iterrows():
-            processed_word = clean_technical_term(row["semantic_term_description"])
-            # new_embedding: list[float] = get_embeddings(
-            #     processed_word,
-            #     self.openai_model,
-            #     self.settings.openai.embeddings_model,
-            # )
-            # new_embedding = get_hf_embeddings(processed_word)
-            documents.append(processed_word)
-            metadatas.append(
-                {
-                    "meta_term": row["meta_term"],
-                    "meta_table_name": row["meta_table_name"],
-                    "meta_terms_definitions": (
-                        " "
-                        if pd.isna(row["meta_terms_definitions"])
-                        else row["meta_terms_definitions"]
-                    ),
-                    "meta_terms_replacements": (
-                        " "
-                        if pd.isna(row["meta_terms_replacements"])
-                        else row["meta_terms_replacements"]
-                    ),
-                }
-            )
-            ids.append(f"id_experiments_llama_col_{index}")
-        self.index_with_documents(
-            collection_name=self.collection_names[
-                "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-            ],
-            ids=ids,
-            embedding_function=self.huggingface_embedding_function,
-            documents=documents,
-            metadatas=metadatas,
-        )
-        print("Colección llama_experiments entrenada!")
+    # def train_openai_experiments_collection(self):
+    #     # Leyendo el diccionario del excel
+    #     excel_data = read_database_experiments(
+    #         sheet_name="bussiness_semantics",
+    #         cols=[
+    #             "semantic_term_description",
+    #             "meta_term",
+    #             "meta_table_name",
+    #             "meta_terms_definitions",
+    #             "meta_terms_replacements",
+    #             "meta_sql_advices",
+    #         ],
+    #     )
+    #     vectors = []
+    #     metadatas = []
+    #     ids = []
+    #     for index, row in excel_data.iterrows():
+    #         processed_word = clean_technical_term(row["semantic_term_description"])
+    #         new_embedding: list[float] = self.openai_native_model.get_embeddings(processed_word)
+    #         # new_embedding: list[float] = get_embeddings(
+    #         #     processed_word,
+    #         #     self.openai_model,
+    #         #     self.settings.openai.embeddings_model,
+    #         # )
+    #         # new_embedding = get_hf_embeddings(processed_word)
+    #         vectors.append(new_embedding)
+    #         metadatas.append(
+    #             {
+    #                 "meta_term": row["meta_term"],
+    #                 "meta_table_name": row["meta_table_name"],
+    #                 "meta_terms_definitions": (
+    #                     " "
+    #                     if pd.isna(row["meta_terms_definitions"])
+    #                     else row["meta_terms_definitions"]
+    #                 ),
+    #                 "meta_terms_replacements": (
+    #                     " "
+    #                     if pd.isna(row["meta_terms_replacements"])
+    #                     else row["meta_terms_replacements"]
+    #                 ),
+    #             }
+    #         )
+    #         ids.append(f"id_experiments_col_{index}")
+    #     self.index_with_vectors(
+    #         collection_name=self.collection_names[
+    #             "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
+    #         ],
+    #         embeddings=vectors,
+    #         ids=ids,
+    #         metadatas=metadatas,
+    #         embedding_function=self.openai_embedding_function
+    #     )
+    #     print("Colección openai_experiments entrenada!")
+
+    # def train_llama_experiments_collection(self):
+    #     # Leyendo el diccionario del excel
+    #     excel_data = read_database_experiments(
+    #         sheet_name="bussiness_semantics",
+    #         cols=[
+    #             "semantic_term_description",
+    #             "meta_term",
+    #             "meta_table_name",
+    #             "meta_terms_definitions",
+    #             "meta_terms_replacements",
+    #             "meta_sql_advices",
+    #         ],
+    #     )
+    #     documents = []
+    #     metadatas = []
+    #     ids = []
+    #     for index, row in excel_data.iterrows():
+    #         processed_word = clean_technical_term(row["semantic_term_description"])
+    #         # new_embedding: list[float] = get_embeddings(
+    #         #     processed_word,
+    #         #     self.openai_model,
+    #         #     self.settings.openai.embeddings_model,
+    #         # )
+    #         # new_embedding = get_hf_embeddings(processed_word)
+    #         documents.append(processed_word)
+    #         metadatas.append(
+    #             {
+    #                 "meta_term": row["meta_term"],
+    #                 "meta_table_name": row["meta_table_name"],
+    #                 "meta_terms_definitions": (
+    #                     " "
+    #                     if pd.isna(row["meta_terms_definitions"])
+    #                     else row["meta_terms_definitions"]
+    #                 ),
+    #                 "meta_terms_replacements": (
+    #                     " "
+    #                     if pd.isna(row["meta_terms_replacements"])
+    #                     else row["meta_terms_replacements"]
+    #                 ),
+    #             }
+    #         )
+    #         ids.append(f"id_experiments_llama_col_{index}")
+    #     self.index_with_documents(
+    #         collection_name=self.collection_names[
+    #             "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
+    #         ],
+    #         ids=ids,
+    #         embedding_function=self.huggingface_embedding_function,
+    #         documents=documents,
+    #         metadatas=metadatas,
+    #     )
+    #     print("Colección llama_experiments entrenada!")
+    
+    # TODO PARA EXPERIMENTS
 
     def train_specific_collection(self):
         collection_names = {
@@ -556,12 +558,12 @@ class DataIndexerAssistant:
             self.collection_names[
                 "COLUMNS_DEFINITIONS_COLLECTION"
             ]: lambda: self.train_columns_definitions_collection(),
-            self.collection_names[
-                "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-            ]: lambda: self.train_openai_experiments_collection(),
-            self.collection_names[
-                "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-            ]: lambda: self.train_llama_experiments_collection(),
+            # self.collection_names[
+            #     "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
+            # ]: lambda: self.train_openai_experiments_collection(),
+            # self.collection_names[
+            #     "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
+            # ]: lambda: self.train_llama_experiments_collection(),
         }
         print("Selecciona una colección:")
         for i, collection_name in enumerate(collection_names):
@@ -576,7 +578,7 @@ class DataIndexerAssistant:
         for _, collection_value in self.collection_names.items():
             db = Langchain_Chroma_Collection(
                 embedding_function=self.openai_embedding_function,
-                persist_directory=self.chromadb_directory,
+                persist_directory=self.chroma_dev_db_path,
                 collection_name=collection_value,
             )
             count = db._collection.count()

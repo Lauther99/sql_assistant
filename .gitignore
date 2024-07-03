@@ -2,3 +2,9 @@ virtual-enviroments
 src/settings/.env
 src/settings/__pycache__
 src/utils/__pycache__
+src/document_indexing/__pycache__
+src/db/chroma_db
+src/components/memory/__pycache__
+src/document_indexing/data_functions/__pycache__
+src/components/models/__pycache__/
+src/db/handlers/__pycache__/
