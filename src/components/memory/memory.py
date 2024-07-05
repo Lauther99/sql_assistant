@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
 from src.settings.settings import Settings
-from src.components.models.models import Langchain_Model
+from src.components.models.models_interfaces import Base_LLM
 from src.components.memory import MEMORY_TYPES
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
@@ -25,13 +25,8 @@ New summary:"""
 
 
 class Memory:
-    def __init__(self, model: Langchain_Model) -> None:
+    def __init__(self) -> None:
         self.chat_memory = []
-        self.model = model
-
-    def init_model(self):
-        print("Iniciando el modelo para la memoria")
-        self.model.init_model()
 
     def get_current_messages(self):
         return self.chat_memory
@@ -62,7 +57,7 @@ class Memory:
             return
         raise ValueError("Can not add AI message")
 
-    def predict_conversation_summary(self, existing_summary: str = ""):
+    def predict_conversation_summary(self, model: Base_LLM, existing_summary: str = ""):
         new_lines: str = ""
         prompt = memory_template
         existing_summary = f"Current summary:\n {existing_summary}" if len(existing_summary) >=1 else ""
@@ -83,7 +78,7 @@ class Memory:
 
         prompt = prompt.format(current_summary=existing_summary, new_lines=new_lines)
 
-        res = self.model.query_llm(prompt)
+        res = model.query_llm(prompt)
 
         return res["text"]
 

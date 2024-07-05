@@ -8,3 +8,12 @@ src/components/memory/__pycache__
 src/document_indexing/data_functions/__pycache__
 src/components/models/__pycache__/
 src/db/handlers/__pycache__/
+src/components/models/embeddings/__pycache__
+src/components/models/llms/__pycache__
+src/app/pipeline_processes/query_post_process/__pycache__
+src/app/pipeline_processes/query_pre_process/__pycache__
+src/app/pipeline_processes/sql_pre_process/__pycache__
+src/app/pipeline_processes/sql_generation_process/__pycache__
+src/app/pipeline_processes/sql_post_process/__pycache__
+src/app/rag/__pycache__
+src/app/__pycache__

@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\open_ai_assistant_v2")
-from src.document_indexing.data_functions.data_functions import (
+from src.utils.reader_utils import (
     read_sql_examples,
     read_classify_dictionary,
     read_database_semantics,
@@ -9,11 +9,10 @@ from src.document_indexing.data_functions.data_functions import (
 )
 from src.utils.utils import clean_sentence
 from src.settings.settings import Settings, Experiments_Settings
-from src.utils.utils import get_embeddings, clean_technical_term
-from src.components.models.models import (
-    Langchain_Model,
-    Openai_Model,
-    HuggingFace_Model,
+from src.components.models.embeddings.embeddings import (
+    Langchain_OpenAI_Embeddings,
+    Openai_Embeddings,
+    HF_MultilingualE5_Embeddings,
 )
 from langchain_community.vectorstores.chroma import (
     Chroma as Langchain_Chroma_Collection,
@@ -82,9 +81,9 @@ class DataIndexerAssistant:
         }
 
     def init_models(self):
-        self.openai_native_model = Openai_Model()
-        self.langchain_model = Langchain_Model()
-        self.hf_model = HuggingFace_Model()
+        self.openai_native_model = Langchain_OpenAI_Embeddings()
+        self.langchain_model = Openai_Embeddings()
+        self.hf_model = HF_MultilingualE5_Embeddings()
 
         self.openai_native_model.init_model()
         self.langchain_model.init_model()

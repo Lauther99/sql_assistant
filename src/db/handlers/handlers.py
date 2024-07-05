@@ -6,7 +6,7 @@ from langchain_community.vectorstores.chroma import Chroma
 from chromadb.api.models.Collection import Collection
 from typing import List, Dict, Optional
 from src.utils.utils import clean_sentence
-from src.document_indexing.data_functions.data_functions import read_database_semantics
+from src.utils.reader_utils import read_database_semantics
 import inspect
 
 
