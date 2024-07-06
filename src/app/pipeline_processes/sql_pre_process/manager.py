@@ -68,11 +68,11 @@ def complex_request_process_semantics(
     embeddings: Openai_Embeddings,
     collector: AppDataCollector,
 ):
-    modified_request = collector.flavored_request_for_semantic_search
-    
+    flavored_request = collector.flavored_request_for_semantic_search
+    modified_request = collector.modified_user_request
     # Busqueda semantica (retriever)
     semantic_tables, semantic_columns, semantic_relations_descriptions = (
-        retrieve_sql_semantic_information(modified_request, embeddings)
+        retrieve_sql_semantic_information(flavored_request, embeddings)
     )
 
     semantic_info = generate_semantic_info(

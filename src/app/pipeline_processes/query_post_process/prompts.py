@@ -3,13 +3,13 @@ translator_template = """Your task is to translate Text_2, follow this steps:
 First, detect language in Text_1:
 Text_1: '''{user_input}'''
 
-Second, detect language in Text_2:
+Second, look up Text_2:
 Text_2: '''{actual_answer}'''
 
-Third, translate Text_2 into Text_1's language."""
+Third, carefully translate Text_2 into Text_1's language."""
 
 translator_template_suffix="""Use the following format to respond:
-detected_language: english/spanish/portuguesse, etc
+detected_language: detected language in Text_1.
 response: Text_2 translated into the detected language."""
 
 def get_translator_prompt(user_input, actual_answer):
