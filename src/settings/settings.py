@@ -161,6 +161,28 @@ class ChromaDBSetup:
         )
         return collection
 
+    @staticmethod
+    def get_terms_collection() -> Collection:
+        """"""
+
+        api_key = Config.get_hf_config()["HF_KEY"]
+        embeddings_model_name = Config.get_hf_config()["HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"]
+
+        collection_name = Config.get_chromadb_config()["TERMS_COLLECTION"]
+
+        chromadb_directory = Config.get_chromadb_config()["CHROMADB_DIRECTORY"]
+        path = os.path.abspath(chromadb_directory)
+
+        embedding_function = embedding_functions.HuggingFaceEmbeddingFunction(
+            api_key=api_key,
+            model_name=embeddings_model_name,
+        )
+        chroma_client = chromadb.PersistentClient(path=path)
+        collection = chroma_client.get_collection(
+            name=collection_name, embedding_function=embedding_function
+        )
+        return collection
+
 
 class ChromaExperimentsDBSetup:
     @staticmethod
@@ -258,8 +280,3 @@ class Settings:
     Hugging_face = HFSettings
 
 
-class Experiments_Settings:
-    Openai = OpenAISettings
-    Chroma = ChromaExperimentsDBSetup
-    Sql = SQLSettings
-    Hugging_face = HFSettings

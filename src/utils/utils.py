@@ -1,7 +1,7 @@
 import nltk
 
 nltk.data.path.append(
-    "C:\\Users\\lauth\\OneDrive\\Desktop\\open_ai_assistant_v2\\src\\assets\\nltk_data"
+    "C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3\\src\\assets\\nltk_data"
 )
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -73,17 +73,6 @@ def string_2_bool(cadena: str):
     """Convierte una cadena en booleano"""
     palabras = cadena.lower().split()
     return "true" in palabras
-
-# ToDo: Cambiar de sitio, esto no deberia ir aqui, debe ir con los modelos de generacion de respuesta/embeddings!!!!!!! ---------------------------------------------------------------------
-# def get_embeddings(
-#     input_string: str, openai_model_endpoint: OpenAI, openai_embeddings_model_name: str
-# ) -> list[float]:
-#     """Obtiene embeddings de OpenAI"""
-#     response = openai_model_endpoint.embeddings.create(
-#         input=input_string, model=openai_embeddings_model_name
-#     )
-#     return response.data[0].embedding
-# ToDo: Cambiar de sitio, esto no deberia ir aqui!!!!!!! ---------------------------------------------------------------------
 
 def sentence_similarity(vector_1: list[float], vector_2: list[float]):
     """Obtiene similitud semantica entre 2 vectores"""

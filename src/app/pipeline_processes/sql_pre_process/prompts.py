@@ -8,15 +8,133 @@ Use this relationships descriptions to find the most related tables to the user 
 {relations_descriptions_text}
 
 Your task is to pick the most related tables according to the next user request:
-user_request: {user_request}
+user_request: {user_request}"""
 
-Note: Yoy have to answer with database table name instead of the name of the table.
+related_semantic_tables_suffix: str = """Note: Yoy have to answer with database table name instead of the name of the table.
 
 Use the following key format to respond:
 tables: Comma separated list of selected tables.
 
 Begin!"""
 
+multi_definition_question_template = """Your task is to generate a question about what should be given by user to make his request clear and reduce ambiguity, follow carefully the next steps:
+
+First, look up the user request:
+user_request: '''{user_request}'''
+
+Second, read carefully the next analysis why is this request determinated as "unclear":
+analysis: '''{analysis}'''
+
+Third, evaluation. Before you generate a question, evaluate what is necessary to ask the user and what needs to be given by user to be a clear sentence based on the previous analysis.
+
+Note: Don't forget to provide some options so the user can easily choose.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+key: "question"
+content: Generated question that will be asked to the user.
+key: "analysis"
+content: brief analysis in one line.
+End of Key format
+
+Begin!"""
+
+multi_definition_question_suffix = "question:"
+
+complement_request_template = """Your task is to improve the user request according to a selected option:
+
+First, look up the sentence request (This is what you will modify):
+sentence_request: '''{user_request}'''
+
+Second, read carefully the next messages between AI and User:
+ai_question: '''{ai_question}'''
+user_response: '''{user_response}'''
+
+Third, evaluation. Improve the previous request according to the user information given in his response.
+
+Note: Try not to change all the sentence request, use user response information to complete the request.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+key: "modified_sentence"
+content: Modified sentence request, should start with: "The human is ...".
+key: "analysis"
+content: brief analysis in one line.
+End of Key format
+
+Begin!"""
+
+complement_request_suffix = "modified_sentence:"
+
+technical_terms_template = """I want to create a dictionary but I need your help to find all possible technical, ambiguous or unknowing terms in the sentence, follow carefully the next steps:
+First, take your time and read carefully the next sentence:
+sentence: '''{user_request}'''
+
+Second, extract technical, ambiguous or unknowing terms.
+
+Third, look at the sentence again and find possible rare names or tags.
+
+Fourth, create a list with extracted terms and erase known common terms that are not related to systems measuring.
+
+Note: Do not create new terms, use only the terms in sentence. You can also use compound words. Do not cut or separate a single word into several words.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+key: "terms"
+content: Comma separated list of terms.
+End of Key format"""
+
+technical_terms_suffix = "terms:"
+
+multi_definition_detector_prompt = """Your task is to classify the sentence into clear or unclear, follow carefully the next steps:
+
+First, look up the technical terms found in the sentence:
+Technical terms: '''{technical_terms}'''
+
+Second, look up the next definitions and evaluate if there are multi definitions for each of technical terms shown before.
+Definitions:
+{definitions}
+Third, evaluation. To classify pick every term and answer the question: what is human refering with this term?
+If there is single definition for a term, then is clear, but if there are many definitions and with sentence context still making ambiguity, then is unclear. On the other hand, if there are many definitions and with sentence context human refers to specific definition, then is clear.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+key: "class"
+content: clear/unclear.
+key: "analysis"
+content: brief analysis.
+End of Key format
+Begin!
+sentence: '''{sentence}'''"""
+
+multi_definition_detector_suffix = "class:"
+
+replace_terms_prompt = """The next is a request sentence:
+sentence: '''{sentence}'''
+
+Instructions:
+Your task is to find the next list of technical terms in sentence and replace them if it is necessary with correct words for a better comprehension. 
+
+Technical terms: '''{technical_terms}'''
+
+Suggestions for replacing:
+{replace_instructions}
+Note: Pay attention to the recommendations. When you find a term that needs to be replaced use the suggested one.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+key: "modified_sentence"
+content: Modified sentence.
+End of Key format
+
+Begin!"""
+
+replace_terms_suffix = "modified_sentence:"
 
 def get_generate_semantic_tables_prompt(
     user_request,
@@ -43,5 +161,78 @@ def get_generate_semantic_tables_prompt(
         relations_descriptions_text=relations_descriptions_text,
         user_request=user_request,
     )
+
+    return prompt, related_semantic_tables_suffix
+
+
+def get_multi_definition_question_prompt(user_request, analysis):
+    """Recomendable usar con el modelo de llama 3 por el suffix, para asi no tener inconvenientes con la respuesta."""
+    return (
+        multi_definition_question_template.format(
+            user_request=user_request, analysis=analysis
+        ),
+        multi_definition_question_suffix,
+    )
+
+
+def get_complement_request_prompt(user_request, ai_question, user_response):
+    """Recomendable usar con el modelo de llama 3 por el suffix, para asi no tener inconvenientes con la respuesta."""
+    return (
+        complement_request_template.format(
+            user_request=user_request,
+            ai_question=ai_question,
+            user_response=user_response,
+        ),
+        complement_request_suffix,
+    )
+
+
+def get_technical_terms_prompt(user_request):
+    """Recomendable usar con el modelo de llama 3 por el suffix, para asi no tener inconvenientes con la respuesta."""
+    return (
+        technical_terms_template.format(user_request=user_request),
+        technical_terms_suffix,
+    )
     
-    return prompt
+def get_multi_definition_detector_prompt(user_request, terms_dictionary):
+    """Recomendable usar con el modelo de llama 3 por el suffix, para asi no tener inconvenientes con la respuesta."""
+    
+    definitions = ""
+    technical_terms_arr = list()
+    for _, item in enumerate(terms_dictionary):
+        technical_terms_arr.append(item["original_term"])
+        definitions += f"""For term '{item["original_term"]}'\n"""
+        for _, inner_definition in enumerate(item["definitions"]):
+            definitions += f"""- {inner_definition["definition"]}\n"""
+        definitions += "\n"
+
+    technical_terms = ", ".join(technical_terms_arr)
+
+    instruction = multi_definition_detector_prompt.format(
+        technical_terms=technical_terms, definitions=definitions, sentence=user_request
+    )
+    
+    return instruction, multi_definition_detector_suffix
+
+def get_modified_request_prompt(user_request, terms_dictionary):
+    replace_instructions = ""
+    technical_terms_arr = list()
+    for _, item in enumerate(terms_dictionary):
+        if len(item["definitions"]) > 0:
+            technical_terms_arr.append(item["original_term"])
+            replace_instructions += f"""For term '{item["original_term"]}'\n"""
+            for _, inner_definition in enumerate(item["definitions"]):
+                replace_instructions += (
+                    f"""- {inner_definition["replace_instruction"]}\n"""
+                )
+            replace_instructions += "\n"
+
+    technical_terms = ", ".join(technical_terms_arr)
+
+    instruction = replace_terms_prompt.format(
+        technical_terms=technical_terms,
+        replace_instructions=replace_instructions,
+        sentence=user_request,
+    )
+
+    return instruction, replace_terms_suffix

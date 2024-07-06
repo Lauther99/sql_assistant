@@ -67,16 +67,16 @@ def read_database_semantics(sheet_name: str  = "semantics_tables", cols: list[st
         
     return ex_df
 
-# #TODO: ESTO DEBE IR EN EXPERIMENTS--------------------------------------------------------------
-# def read_database_experiments(sheet_name: str  = "Hoja1", cols: list[str] = None):
-#     """To read an excel that contains sql QA examples"""
-#     current_dir = os.path.dirname(__file__)
-#     excel_path = os.path.join(current_dir, "../../../assets/experiments.xlsx")
-#     if cols is not None:
-#         ex_df = pd.read_excel(io=excel_path, sheet_name=sheet_name, usecols=cols)
-#     else: 
-#         ex_df = pd.read_excel(io=excel_path, sheet_name=sheet_name)
+def read_database_terms(sheet_name: str  = "", cols: list[str] = None):
+    """To read an excel that contains terms definitions"""
+    current_dir = os.path.dirname(__file__)
+    excel_path = os.path.join(current_dir, "./data/terms_data.xlsx")
+    if cols is not None:
+        ex_df = pd.read_excel(io=excel_path, sheet_name=sheet_name, usecols=cols)
+    else: 
+        ex_df = pd.read_excel(io=excel_path, sheet_name=sheet_name)
         
-#     return ex_df
-# #TODO: ESTO DEBE IR EN EXPERIMENTS--------------------------------------------------------------
+    return ex_df
+
+
 

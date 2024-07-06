@@ -2,7 +2,7 @@ from src.utils.reader_utils import read_database_semantics, read_tables_data
 
 generate_sql_prefix_template: str = """You are a SQL SERVER 2014 expert. Given an input request, create a syntactically correct SQL SERVER 2014 query to run. Remember NOT include backticks ```sql ``` before and after the created query. Unless otherwise specified."""
 
-generate_sql_suffix_template: str = """Follow these Instructions for creating syntactically correct SQL query:
+generate_sql_suffix: str = """Follow these Instructions for creating syntactically correct SQL query:
     - Be sure not to query for all columns, select more relevants ones. Avoid using SELECT * .
     - Be sure not to query for columns that do not exist in the tables and use alias only where required.
     - Likewise, when asked about the average (AVG function) or ratio, ensure the appropriate aggregation function is used.
@@ -27,7 +27,7 @@ Let's start thinking..."""
 create_table_template = """CREATE TABLE IF NOT EXISTS dbo_v2.{table_name}(\n{list_columns_plus_type_plus_descriptions});"""
 
 
-def add_examples_in_prompt(prompt: str, sql_examples: tuple):
+def _add_examples_in_prompt(prompt: str, sql_examples: tuple):
     if sql_examples:
         examples = "".join(
             f"input_request: {item[1][1]}\nsql_query: {item[0][1]}\n\n"
@@ -38,7 +38,7 @@ def add_examples_in_prompt(prompt: str, sql_examples: tuple):
     return prompt
 
 
-def add_documentation_in_prompt(prompt: str, semantic_info: dict[str, any]):
+def _add_documentation_in_prompt(prompt: str, semantic_info: dict[str, any]):
     documentation = []
     _, doc_df = read_tables_data()
     grouped_doc = doc_df.groupby("table")["documentation"].apply(list).reset_index()
@@ -62,7 +62,7 @@ def add_documentation_in_prompt(prompt: str, semantic_info: dict[str, any]):
     return prompt
 
 
-def add_ddl_in_prompt(prompt: str, semantic_info: dict[str, any]):
+def _add_ddl_in_prompt(prompt: str, semantic_info: dict[str, any]):
     ddls = list()
 
     for table in semantic_info:
@@ -109,15 +109,15 @@ def get_generate_sql_prompt(
     prompt = generate_sql_prefix_template
 
     # Le agregamos los resultados de los ejemplos
-    prompt = add_examples_in_prompt(prompt, sql_examples)
+    prompt = _add_examples_in_prompt(prompt, sql_examples)
 
     # Le agregamos los resultados de la documentacion
-    prompt = add_documentation_in_prompt(prompt, semantic_info)
+    prompt = _add_documentation_in_prompt(prompt, semantic_info)
 
     # Le agregamos los DDL
-    prompt = add_ddl_in_prompt(prompt, semantic_info)
+    prompt = _add_ddl_in_prompt(prompt, semantic_info)
 
     # Agregamos el suffix
-    prompt += generate_sql_suffix_template.format(user_request=user_request)
+    suffix = generate_sql_suffix.format(user_request=user_request)
     
-    return prompt
+    return prompt, suffix

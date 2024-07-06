@@ -1,5 +1,9 @@
 import pandas as pd
 
+create_table_template: str = (
+    """CREATE TABLE IF NOT EXISTS dbo_v2.{table_name}(\n{list_columns_plus_type_plus_descriptions});"""
+)
+
 sql_classifier_template: str = """Your task is to classify the next SQL query into complete or incomplete.
 Instructions:
 Is complete when sql_query has all necessary to be a correct SQL query.
@@ -8,9 +12,9 @@ End of instructions
 
 Database schema:
 {tables}
-End of Database schema:
+End of Database schema:"""
 
-Use the following key format to respond:
+sql_classifier_suffix = """Use the following key format to respond:
 analysis: Brief analysis.
 class: complete or incomplete.
 suggestion: Brief recommendation for the user about the missing information to have better results.
@@ -18,19 +22,14 @@ suggestion: Brief recommendation for the user about the missing information to h
 Begin!
 sql_query: '''{sql_query}''' """
 
-create_table_template: str = (
-    """CREATE TABLE IF NOT EXISTS dbo_v2.{table_name}(\n{list_columns_plus_type_plus_descriptions});"""
-)
-
-
 generate_sql_pre_query_template: str = """The next is an incomplete SQL QUERY:
 incomplete_sql_query: '''{incomplete_sql_query}'''
 analysis: {analysis}
 suggestion: {suggestion}
 
-Your task is to generate a pre query where user can find this missing attributes.
+Your task is to generate a pre query where user can find this missing attributes."""
 
-Use the following key format to respond:
+generate_sql_pre_query_suffix = """Use the following key format to respond:
 analysis: Brief analysis.
 sql_pre_query: SQL code.
 tables: Correct comma separated list of used tables
@@ -47,8 +46,9 @@ user_request: {user_request}
 Do not respond with any additional explanation beyond the summary.
 Do not include the pandas DataFrame in your response.
 If Dataframe is empty, respond that answer is not available.
-Ask user to select an item from the list if it is necessary.
-Note: You can make brief suggestion for user query to mention dates or names to retrieve better information from database.
+Ask user to select an item from the list if it is necessary."""
+
+generate_summary_no_intents_suffix = """Note: You can make brief suggestion for user query to mention dates or names to retrieve better information from database.
 
 Use the following key format to respond:
 user_request: The asked user request.
@@ -65,9 +65,9 @@ Your task is to cordially ask the user to choose something from the dataframe be
 Do not include the specific options from dataframe in your response.
 If Dataframe is empty, respond that his request can not be answered for the moment.
 Do not include the pandas DataFrame in your response.
-If you have to refer to something in the dataframe refer it as in 'the list'.
+If you have to refer to something in the dataframe refer it as in 'the list'."""
 
-Use the following key format to respond:
+generate_summary_with_intents_suffix = """Use the following key format to respond:
 user_request: The asked user request.
 response: Your briefly question.
 
@@ -100,8 +100,9 @@ def get_sql_classifier_prompt(sql_query: str, semantic_info: dict[str, any]):
 
     txt_tables = "\n\n".join(ddls)
 
-    prompt = sql_classifier_template.format(tables=txt_tables, sql_query=sql_query)
-    return prompt
+    prompt = sql_classifier_template.format(tables=txt_tables)
+    suffix = sql_classifier_suffix.format(sql_query=sql_query)
+    return prompt, suffix
 
 
 def get_sql_pre_query_prompt(incomplete_sql_query: str, analysis: str, suggestion: str):
@@ -110,7 +111,7 @@ def get_sql_pre_query_prompt(incomplete_sql_query: str, analysis: str, suggestio
         analysis=analysis,
         suggestion=suggestion,
     )
-    return prompt
+    return prompt, generate_sql_pre_query_suffix
 
 
 def get_sql_summary_response_prompt(sql_dataframe: pd.DataFrame, user_request: str, is_pre_query: bool):
@@ -120,10 +121,13 @@ def get_sql_summary_response_prompt(sql_dataframe: pd.DataFrame, user_request: s
             dataframe=sql_dataframe.head(10).to_markdown(),
             user_request=user_request,
         )
+        suffix = generate_summary_no_intents_suffix
     else:
         prompt = generate_summary_with_intents_template
         prompt = prompt.format(
             dataframe=sql_dataframe.head(10).to_markdown(),
             user_request=user_request,
         )
-    return prompt
+        suffix = generate_summary_with_intents_suffix
+        
+    return prompt, suffix

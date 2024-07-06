@@ -17,3 +17,10 @@ src/app/pipeline_processes/sql_generation_process/__pycache__
 src/app/pipeline_processes/sql_post_process/__pycache__
 src/app/rag/__pycache__
 src/app/__pycache__
+
+
+experiments/db
+experiments/experiments_settings/.env
+experiments/experiments_settings/__pycache__
+experiments/utils/__pycache__
+experiments/document_indexing/__pycache__

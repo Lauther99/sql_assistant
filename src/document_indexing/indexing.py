@@ -1,14 +1,14 @@
 import sys
 
-sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\open_ai_assistant_v2")
+sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
 from src.utils.reader_utils import (
     read_sql_examples,
     read_classify_dictionary,
     read_database_semantics,
-    read_database_experiments,
+    read_database_terms
 )
-from src.utils.utils import clean_sentence
-from src.settings.settings import Settings, Experiments_Settings
+from src.utils.utils import clean_sentence, clean_technical_term
+from src.settings.settings import Settings
 from src.components.models.embeddings.embeddings import (
     Langchain_OpenAI_Embeddings,
     Openai_Embeddings,
@@ -35,16 +35,9 @@ class DataIndexerAssistant:
 
         # Configuracion cliente chromadb
         self.chroma_dev_db_path = Settings.Chroma.get_db_path()
-        self.chroma_experiments_db_path = Experiments_Settings.Chroma.get_db_path()
 
         self.chromadb_client = chromadb.PersistentClient(path=self.chroma_dev_db_path)
         
-        # TODO PARA EXPERIMENTS
-        # self.chromadb_experiments_client = chromadb.PersistentClient(
-        #     path=self.chroma_experiments_db_path
-        # )
-        # TODO PARA EXPERIMENTS
-
         # Configuracion embeddings functions
         self.openai_embedding_function = OpenAIEmbeddingFunction(
             api_key=Settings.Openai.get_api_key(),
@@ -72,12 +65,9 @@ class DataIndexerAssistant:
             "COLUMNS_DEFINITIONS_COLLECTION": Config.get_chromadb_config()[
                 "COLUMNS_DEFINITIONS_COLLECTION"
             ],
-            # "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS": Config.get_experimentsdb_config()[
-            #     "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-            # ],
-            # "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS": Config.get_experimentsdb_config()[
-            #     "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-            # ],
+            "TERMS_COLLECTION": Config.get_chromadb_config()[
+                "TERMS_COLLECTION"
+            ],
         }
 
     def init_models(self):
@@ -429,116 +419,54 @@ class DataIndexerAssistant:
         )
         print("Colección columns_definitions entrenada!")
 
-    # TODO PARA EXPERIMENTS
+    def train_terms_collection(self):
+        # Leyendo el diccionario del excel
+        excel_data = read_database_terms(
+            sheet_name="terms_definitions",
+            cols=[
+                "semantic_term_description",
+                "meta_term",
+                "meta_table_name",
+                "meta_terms_definitions",
+                "meta_terms_replacements",
+                "meta_sql_advices",
+            ],
+        )
+        documents = []
+        metadatas = []
+        ids = []
+        for index, row in excel_data.iterrows():
+            processed_word = clean_technical_term(row["semantic_term_description"])
 
-    # def train_openai_experiments_collection(self):
-    #     # Leyendo el diccionario del excel
-    #     excel_data = read_database_experiments(
-    #         sheet_name="bussiness_semantics",
-    #         cols=[
-    #             "semantic_term_description",
-    #             "meta_term",
-    #             "meta_table_name",
-    #             "meta_terms_definitions",
-    #             "meta_terms_replacements",
-    #             "meta_sql_advices",
-    #         ],
-    #     )
-    #     vectors = []
-    #     metadatas = []
-    #     ids = []
-    #     for index, row in excel_data.iterrows():
-    #         processed_word = clean_technical_term(row["semantic_term_description"])
-    #         new_embedding: list[float] = self.openai_native_model.get_embeddings(processed_word)
-    #         # new_embedding: list[float] = get_embeddings(
-    #         #     processed_word,
-    #         #     self.openai_model,
-    #         #     self.settings.openai.embeddings_model,
-    #         # )
-    #         # new_embedding = get_hf_embeddings(processed_word)
-    #         vectors.append(new_embedding)
-    #         metadatas.append(
-    #             {
-    #                 "meta_term": row["meta_term"],
-    #                 "meta_table_name": row["meta_table_name"],
-    #                 "meta_terms_definitions": (
-    #                     " "
-    #                     if pd.isna(row["meta_terms_definitions"])
-    #                     else row["meta_terms_definitions"]
-    #                 ),
-    #                 "meta_terms_replacements": (
-    #                     " "
-    #                     if pd.isna(row["meta_terms_replacements"])
-    #                     else row["meta_terms_replacements"]
-    #                 ),
-    #             }
-    #         )
-    #         ids.append(f"id_experiments_col_{index}")
-    #     self.index_with_vectors(
-    #         collection_name=self.collection_names[
-    #             "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-    #         ],
-    #         embeddings=vectors,
-    #         ids=ids,
-    #         metadatas=metadatas,
-    #         embedding_function=self.openai_embedding_function
-    #     )
-    #     print("Colección openai_experiments entrenada!")
-
-    # def train_llama_experiments_collection(self):
-    #     # Leyendo el diccionario del excel
-    #     excel_data = read_database_experiments(
-    #         sheet_name="bussiness_semantics",
-    #         cols=[
-    #             "semantic_term_description",
-    #             "meta_term",
-    #             "meta_table_name",
-    #             "meta_terms_definitions",
-    #             "meta_terms_replacements",
-    #             "meta_sql_advices",
-    #         ],
-    #     )
-    #     documents = []
-    #     metadatas = []
-    #     ids = []
-    #     for index, row in excel_data.iterrows():
-    #         processed_word = clean_technical_term(row["semantic_term_description"])
-    #         # new_embedding: list[float] = get_embeddings(
-    #         #     processed_word,
-    #         #     self.openai_model,
-    #         #     self.settings.openai.embeddings_model,
-    #         # )
-    #         # new_embedding = get_hf_embeddings(processed_word)
-    #         documents.append(processed_word)
-    #         metadatas.append(
-    #             {
-    #                 "meta_term": row["meta_term"],
-    #                 "meta_table_name": row["meta_table_name"],
-    #                 "meta_terms_definitions": (
-    #                     " "
-    #                     if pd.isna(row["meta_terms_definitions"])
-    #                     else row["meta_terms_definitions"]
-    #                 ),
-    #                 "meta_terms_replacements": (
-    #                     " "
-    #                     if pd.isna(row["meta_terms_replacements"])
-    #                     else row["meta_terms_replacements"]
-    #                 ),
-    #             }
-    #         )
-    #         ids.append(f"id_experiments_llama_col_{index}")
-    #     self.index_with_documents(
-    #         collection_name=self.collection_names[
-    #             "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-    #         ],
-    #         ids=ids,
-    #         embedding_function=self.huggingface_embedding_function,
-    #         documents=documents,
-    #         metadatas=metadatas,
-    #     )
-    #     print("Colección llama_experiments entrenada!")
+            documents.append(processed_word)
+            metadatas.append(
+                {
+                    "meta_term": row["meta_term"],
+                    "meta_table_name": row["meta_table_name"],
+                    "meta_terms_definitions": (
+                        " "
+                        if pd.isna(row["meta_terms_definitions"])
+                        else row["meta_terms_definitions"]
+                    ),
+                    "meta_terms_replacements": (
+                        " "
+                        if pd.isna(row["meta_terms_replacements"])
+                        else row["meta_terms_replacements"]
+                    ),
+                }
+            )
+            ids.append(f"id_terms_col_{index}")
+        self.index_with_documents(
+            collection_name=self.collection_names[
+                "TERMS_COLLECTION"
+            ],
+            ids=ids,
+            embedding_function=self.huggingface_embedding_function,
+            documents=documents,
+            metadatas=metadatas,
+        )
+        print("Colección terms entrenada!")
     
-    # TODO PARA EXPERIMENTS
 
     def train_specific_collection(self):
         collection_names = {
@@ -557,12 +485,9 @@ class DataIndexerAssistant:
             self.collection_names[
                 "COLUMNS_DEFINITIONS_COLLECTION"
             ]: lambda: self.train_columns_definitions_collection(),
-            # self.collection_names[
-            #     "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
-            # ]: lambda: self.train_openai_experiments_collection(),
-            # self.collection_names[
-            #     "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
-            # ]: lambda: self.train_llama_experiments_collection(),
+            self.collection_names[
+                "TERMS_COLLECTION"
+            ]: lambda: self.train_terms_collection(),
         }
         print("Selecciona una colección:")
         for i, collection_name in enumerate(collection_names):

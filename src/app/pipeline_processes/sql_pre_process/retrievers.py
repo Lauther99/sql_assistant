@@ -1,4 +1,3 @@
-from openai import OpenAI
 from src.components.models.models_interfaces import Base_Embeddings
 from src.db.handlers.handlers import (
     add_base_columns,
@@ -7,7 +6,7 @@ from src.db.handlers.handlers import (
     query_by_vector_embedding,
 )
 from src.settings.settings import Settings
-from src.utils.utils import clean_sentence
+from src.utils.utils import clean_sentence, clean_technical_term
 from chromadb.api.models.Collection import Collection
 
 
@@ -48,7 +47,7 @@ def retrieve_sql_semantic_information(
     nodes_collection = Settings.Chroma.get_table_definitions_collection()
     relations_collection = Settings.Chroma.get_relations_definitions_collection()
     columns_collection = Settings.Chroma.get_columns_definitions_collection()
-    
+
     tables = set()
     vector = embeddings.get_embeddings(clean_sentence(user_request))
 
@@ -116,3 +115,68 @@ def retrieve_sql_semantic_information(
         resultado_columnas,
         tables_related_info["table_relations_descriptions"],
     )
+
+
+def retrieve_semantic_term_definitions(
+    embeddings: Base_Embeddings, terms_collection: Collection, technical_terms_arr
+):
+    tables = [
+        "teq_clasificacion",
+        "teq_tipo_equipo",
+        "equ_equipo",
+        "med_tag",
+        "pla_plataforma",
+        "med_sistema_medicion",
+        "fcs_computador_medidor",
+        "fcs_firmware",
+        "var_tipo_variable",
+        "var_variable_datos",
+        "flu_tipo_fluido",
+        "fcs_computadores",
+        "fcs_tipo_computador",
+        "med_tipo_medicion",
+    ]
+    terms_arr = list()
+    has_replacement_definitions = False
+    sql_instructions = False
+
+    for term in technical_terms_arr:
+        original_term = term
+        cleaned_term = clean_technical_term(clean_sentence(original_term))
+
+        vector = embeddings.get_embeddings(cleaned_term)
+
+        definitions = list()
+        for table in tables:
+            r = query_by_vector_embedding(
+                collection=terms_collection,
+                vector_embedding=vector,
+                n=1,
+                score_threshold=0.85,
+                metadata_filters={"meta_table_name": {"$eq": table}},
+            )
+            for item in r:
+                if item[2][1].strip():
+                    definitions.append(
+                        {
+                            "standard_term": item[1][1],
+                            "definition": item[2][1],
+                            "replace_instruction": item[3][1],
+                            # "distance": item[4][1],
+                        }
+                    )
+                    has_replacement_definitions = (
+                        True if item[3][1].strip() else has_replacement_definitions
+                    )
+                    # sql_instructions = True if item[4][1].strip() else sql_instructions
+
+        if definitions:
+            terms_arr.append(
+                {
+                    "original_term": original_term,
+                    "cleaned_term": cleaned_term,
+                    "definitions": definitions,
+                }
+            )
+
+    return terms_arr, has_replacement_definitions, sql_instructions

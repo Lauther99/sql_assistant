@@ -23,6 +23,10 @@ class Base_LLM(ABC):
     @abstractmethod
     def query_llm(self, input):
         pass
+    
+    @abstractmethod
+    def apply_model_template(self, instruction, suffix):
+        pass
 
     def add_response(self, type, prompt, llm_response, json_response):
         response = Base_LLM_Response(type, prompt, llm_response, json_response)

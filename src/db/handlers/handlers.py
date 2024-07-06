@@ -1,10 +1,7 @@
 import sys
-
-sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\open_ai_assistant_v2")
-from langchain_core.documents import Document
-from langchain_community.vectorstores.chroma import Chroma
+sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
 from chromadb.api.models.Collection import Collection
-from typing import List, Dict, Optional
+from typing import Optional
 from src.utils.utils import clean_sentence
 from src.utils.reader_utils import read_database_semantics
 import inspect

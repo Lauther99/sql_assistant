@@ -6,27 +6,67 @@ from src.app.pipeline_processes.query_pre_process.prompts import (
     get_greeting_response_prompt,
     get_simple_filter_prompt,
 )
-from src.app.pipeline_processes.query_pre_process.retrievers import retrieve_classify_examples
 
 
-def generate_request(model: Base_LLM, memory: Memory) -> str:
-    input = get_generate_request_prompt(memory)
+def generate_request(model: Base_LLM, memory: Memory):
+    """
+    Genera una solicitud utilizando un modelo de lenguaje y un contexto de memoria.
 
-    res = base_llm_generation(model, input, "generate-request")
+    Esta función crea un prompt basado en el contexto de memoria proporcionado y aplica una plantilla
+    de modelo para generar una solicitud. El resultado es un diccionario que contiene una intención.
+
+    ### Args:
+    - `model (Base_LLM)`: El modelo de lenguaje que se utilizará para generar la solicitud.
+    - `memory (Memory)`: El contexto de memoria que proporciona la información necesaria para generar la solicitud.
+
+    ### Returns:
+    - `dict`: Un diccionario con una única clave `'intention'`, que tiene un valor de cadena representando la intención de la solicitud.
+    
+    ### Ejemplo de respuesta:
+    ```json
+    {
+        "intention": "The human is requesting information from the EMED-2012-LR-P12 measurement system."
+    }
+    ```
+    """
+    instruction, suffix = get_generate_request_prompt(memory)
+    prompt = model.apply_model_template(instruction, suffix)
+    res = base_llm_generation(model, prompt, "generate-request")
     return res
 
 
-def generate_request_type(model: Base_LLM, user_request: str) -> str:
-    results = retrieve_classify_examples(user_request)
-    
-    input = get_simple_filter_prompt(user_request, results)
+def generate_request_type(model: Base_LLM, user_request: str, classify_examples: tuple) -> str:
+    """
+    Genera un tipo de solicitud utilizando un modelo de lenguaje y ejemplos de clasificación.
 
-    res = base_llm_generation(model, input, "request-type")
+    Esta función crea un prompt basado en la solicitud del usuario y ejemplos de clasificación,
+    y aplica una plantilla de modelo para generar el tipo de solicitud. El resultado es una cadena
+    que describe el tipo de solicitud.
+
+    ### Args:
+    - `model (Base_LLM)`: El modelo de lenguaje que se utilizará para generar el tipo de solicitud.
+    - `user_request (str)`: La solicitud del usuario que se va a clasificar.
+    - `classify_examples (tuple)`: Ejemplos utilizados para ayudar a clasificar la solicitud.
+
+    ### Returns:
+    - `str`: Una cadena que describe el tipo de solicitud. 
+
+    ### Ejemplo de respuesta:
+    ```json
+    {
+        "analysis": "This input is out of my knowledge, this type is complex",
+        "type": "complex"
+    }
+    ```
+    """
+    instruction, suffix = get_simple_filter_prompt(user_request, classify_examples)
+    prompt = model.apply_model_template(instruction, suffix)
+    res = base_llm_generation(model, prompt, "request-type")
     return res
 
 
 def generate_greeting_response_call(model: Base_LLM, memory: Memory) -> str:
-    input = get_greeting_response_prompt(memory)
-
-    res = base_llm_generation(model, input, "greeting-response")
+    instruction, suffix = get_greeting_response_prompt(memory)
+    prompt = model.apply_model_template(instruction, suffix)
+    res = base_llm_generation(model, prompt, "greeting-response")
     return res
