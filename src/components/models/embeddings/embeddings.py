@@ -59,8 +59,8 @@ class HF_MultilingualE5_Embeddings(Base_Embeddings):
         if not isinstance(vector, list) and not all(
             isinstance(i, float) for i in vector
         ):
-            print("Se esta levantando el modelo de embeddings :D")
             estimated_time = float(vector["estimated_time"])
+            print(f"Se esta levantando el modelo de embeddings :D, listo en: {estimated_time}s")
             time.sleep(estimated_time + 10)
             vector = self.get_embeddings(input)
 

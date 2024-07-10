@@ -1,4 +1,5 @@
 from src.utils.reader_utils import read_database_semantics, read_tables_data
+from collections import defaultdict
 
 generate_sql_prefix_template: str = """You are a SQL SERVER 2014 expert. Given an input request, create a syntactically correct SQL SERVER 2014 query to run. Remember NOT include backticks ```sql ``` before and after the created query. Unless otherwise specified."""
 
@@ -38,26 +39,26 @@ def _add_examples_in_prompt(prompt: str, sql_examples: tuple):
     return prompt
 
 
-def _add_documentation_in_prompt(prompt: str, semantic_info: dict[str, any]):
-    documentation = []
-    _, doc_df = read_tables_data()
-    grouped_doc = doc_df.groupby("table")["documentation"].apply(list).reset_index()
-    # Preparar la documentación de las tablas, si existe
-    for table in semantic_info:
-        doc_data = grouped_doc[grouped_doc["table"] == table].to_dict("records")
-        if doc_data:
-            documentation.extend(doc_data)
+def _add_documentation_in_prompt(prompt: str, terms_dictionary: dict[str, any], semantic_info: dict[str, any]):
+    documentation_info = defaultdict(list)
+    has_sql_instructions = False
 
-    if documentation:
-        examples = "\n".join(
-            [
-                f"Table info for: {doc['table']}\n    - "
-                + "\n    - ".join(doc["documentation"])
-                + "\n"
-                for doc in documentation
-            ]
+    for item in terms_dictionary:
+        for inner_item in item["definitions"]:
+            table_name = inner_item["table_name"]
+            sql_instructions = inner_item["sql_instructions"].strip()
+
+            if table_name in semantic_info and sql_instructions:
+                has_sql_instructions = True
+                documentation_info[table_name].append(sql_instructions)
+
+    if has_sql_instructions:
+        texts = "\n".join(
+            f"Table info for: {table_name}\n    - " + "\n    - ".join(sqls)
+            for table_name, sqls in documentation_info.items()
         )
-        prompt += f"\nHere is the relevant table info:\nTABLES INFO:\n{examples}\nEND OF TABLES INFO\n"
+        
+        prompt += f"\nHere is some relevant table information:\nTABLES INFO:\n{texts}\nEND OF TABLES INFO\n"
 
     return prompt
 
@@ -87,7 +88,7 @@ def _add_ddl_in_prompt(prompt: str, semantic_info: dict[str, any]):
         ddls.append(t)
 
     tables_context = "\n".join(ddls)
-    prompt += f"\nUse only tables names and Column names mentioned in context:\nCONTEXT:\n{tables_context}\n\n"
+    prompt += f"\nUse only tables names and Column names mentioned in DDL list:\nDDL LIST:\n{tables_context}\n\n"
     rel = read_database_semantics(
         "relations", ["table_1", "table_2", "join_description"]
     )
@@ -96,7 +97,7 @@ def _add_ddl_in_prompt(prompt: str, semantic_info: dict[str, any]):
         if all(elemento in semantic_info for elemento in table_1_plus_table_2):
             prompt += f"""{item["join_description"]}\n"""
 
-    prompt += "END OF CONTEXT\n\nPay close attention on which column is in which table. Do not use columns from tables not mentioned in context.\n\n"
+    prompt += "END OF DDL LIST\n\nPay close attention on which column is in which table. Do not use columns from tables not mentioned in DDL list.\n\n"
 
     return prompt
 
@@ -105,18 +106,19 @@ def get_generate_sql_prompt(
     user_request: str,
     sql_examples: tuple,
     semantic_info: dict[str, any],
+    terms_dictionary: dict[str, any]
 ):
     prompt = generate_sql_prefix_template
 
     # Le agregamos los resultados de los ejemplos
     prompt = _add_examples_in_prompt(prompt, sql_examples)
 
-    # Le agregamos los resultados de la documentacion
-    prompt = _add_documentation_in_prompt(prompt, semantic_info)
-
     # Le agregamos los DDL
     prompt = _add_ddl_in_prompt(prompt, semantic_info)
 
+    # Le agregamos los resultados de la documentacion
+    prompt = _add_documentation_in_prompt(prompt, terms_dictionary, semantic_info)
+    
     # Agregamos el suffix
     suffix = generate_sql_suffix.format(user_request=user_request)
     

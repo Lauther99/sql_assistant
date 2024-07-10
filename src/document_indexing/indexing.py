@@ -68,6 +68,9 @@ class DataIndexerAssistant:
             "TERMS_COLLECTION": Config.get_chromadb_config()[
                 "TERMS_COLLECTION"
             ],
+            "TERMS_EXAMPLES_COLLECTION": Config.get_chromadb_config()[
+                "TERMS_EXAMPLES_COLLECTION"
+            ],
         }
 
     def init_models(self):
@@ -105,6 +108,16 @@ class DataIndexerAssistant:
                 "COLUMNS_DEFINITIONS_COLLECTION"
             ]: lambda: self._delete_collection(
                 self.collection_names["COLUMNS_DEFINITIONS_COLLECTION"]
+            ),
+            self.collection_names[
+                "TERMS_COLLECTION"
+            ]: lambda: self._delete_collection(
+                self.collection_names["TERMS_COLLECTION"]
+            ),
+            self.collection_names[
+                "TERMS_EXAMPLES_COLLECTION"
+            ]: lambda: self._delete_collection(
+                self.collection_names["TERMS_EXAMPLES_COLLECTION"]
             ),
             # self.collection_names[
             #     "EXPERIMENTS_COLLECTION_OPENAI_EMBEDDINGS"
@@ -453,6 +466,11 @@ class DataIndexerAssistant:
                         if pd.isna(row["meta_terms_replacements"])
                         else row["meta_terms_replacements"]
                     ),
+                    "meta_sql_advices": (
+                        ""
+                        if pd.isna(row["meta_sql_advices"])
+                        else row["meta_sql_advices"]
+                    ),
                 }
             )
             ids.append(f"id_terms_col_{index}")
@@ -466,6 +484,36 @@ class DataIndexerAssistant:
             metadatas=metadatas,
         )
         print("Colección terms entrenada!")
+    
+    def train_examples_terms_collection(self):
+        # Leyendo el diccionario del excel
+        excel_data = read_database_terms(
+            sheet_name="examples_terms",
+        )
+        documents = []
+        metadatas = []
+        ids = []
+        for index, row in excel_data.iterrows():
+            processed_word = clean_sentence(row["user_request"])
+
+            documents.append(processed_word)
+            metadatas.append(
+                {
+                    "user_request": row["user_request"],
+                    "terms": row["terms"],
+                }
+            )
+            ids.append(f"id_examples_terms_col_{index}")
+        self.index_with_documents(
+            collection_name=self.collection_names[
+                "TERMS_EXAMPLES_COLLECTION"
+            ],
+            ids=ids,
+            embedding_function=self.huggingface_embedding_function,
+            documents=documents,
+            metadatas=metadatas,
+        )
+        print("Colección examples-terms entrenada!")
     
 
     def train_specific_collection(self):
@@ -488,6 +536,9 @@ class DataIndexerAssistant:
             self.collection_names[
                 "TERMS_COLLECTION"
             ]: lambda: self.train_terms_collection(),
+            self.collection_names[
+                "TERMS_EXAMPLES_COLLECTION"
+            ]: lambda: self.train_examples_terms_collection(),
         }
         print("Selecciona una colección:")
         for i, collection_name in enumerate(collection_names):

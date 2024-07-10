@@ -29,7 +29,9 @@ class Langchain_OpenAI_LLM(Base_LLM):
         )
 
     def query_llm(self, input):
-        response = self.chain.invoke(input={"task": input})
+        response = {}
+        output = self.chain.invoke(input={"task": input})
+        response["text"] = str(output["text"]).strip()
         return response
 
     def apply_model_template(self, instruction, suffix):
@@ -105,7 +107,6 @@ class HF_Llama38b_LLM(Base_LLM):
 
         except requests.exceptions.RequestException as e:
             print(f"Error en la solicitud: {e}")
-        
         return response
 
     def apply_model_template(self, instruction, suffix):

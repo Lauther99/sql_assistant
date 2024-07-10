@@ -38,20 +38,18 @@ Note: A placeholder looks like: '<Name of placeholder>'
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format. Avoid add the terms 'key' or 'content' as part of the format.
 Start Key format:
-key: "analysis"
-content: Brief analysis.
-
 key: "class"
 content: complete or incomplete.
-
+key: "analysis"
+content: Your brief analysis.
 key: "suggestion"
-content: Brief recommendation for the user about the missing information to have better results.
+content: A brief recommendation for the user about the missing information to have better results.
 End of Key format
 
 Begin!
 sql_query: '''{sql_query}'''"""
 
-sql_classifier_suffix = """class: """
+sql_classifier_suffix = """class:"""
 
 generate_sql_pre_query_template: str = """The next is an incomplete SQL QUERY:
 incomplete_sql_query: '''{incomplete_sql_query}'''
@@ -68,27 +66,33 @@ intention: Very Brief intention of this sql_pre_query. Always respond the questi
 
 Begin!"""
 
-generate_summary_no_intents_template: str = """The following is a pandas DataFrame with the results of a database query:
+generate_summary_no_intents_template: str = """I need your help. Follow carefully the next steps:
+
+First, look up the next user request:
+user_request: '''{user_request}'''
+
+Second, the next is a pandas dataframe that answers the previous request. Pay attention to this information:
+
 {dataframe}
 
-Your task is to generate a briefly summarize for data based on the user request that was asked. 
-user_request: {user_request}
+Third, generation. Generate a brief response to the user request based on the previous dataframe.
 
-Do not respond with any additional explanation beyond the summary.
-Do not include the pandas DataFrame in your response.
-If Dataframe is empty, respond that answer is not available.
-Ask user to select an item from the list if it is necessary."""
+Fourth, evaluation. Evaluate if your response is answering the user request.
+
+Note:
+ - Do not include any explanations or apologies in your response.
+ - Do not add your own conclusions or clarifications.
+ - If dataframe is empty, say that the response is not available."""
 
 generate_summary_no_intents_suffix = """Note: You can make brief suggestion for user query to mention dates or names to retrieve better information from database.
 
 Use the following key format to respond:
-user_request: The asked user request.
-response: Your briefly summarize.
+response: Your briefly response.
 
-Begin!:"""
+Begin!"""
 
 generate_summary_with_intents_template: str = """The following is a user request:
-user_request: {user_request}
+user_request: '''{user_request}'''
 But for before continue is necessary that user choose one option of the results in the pandas DataFrame:
 {dataframe}
 

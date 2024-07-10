@@ -6,9 +6,10 @@ from src.app.pipeline_processes.query_pre_process.prompts import (
     get_greeting_response_prompt,
     get_simple_filter_prompt,
 )
+from src.components.collector.collector import LLMResponseCollector
 
 
-def generate_request(model: Base_LLM, memory: Memory):
+def generate_request(model: Base_LLM, llm_collector: LLMResponseCollector, memory: Memory):
     """
     Genera una solicitud utilizando un modelo de lenguaje y un contexto de memoria.
 
@@ -31,11 +32,11 @@ def generate_request(model: Base_LLM, memory: Memory):
     """
     instruction, suffix = get_generate_request_prompt(memory)
     prompt = model.apply_model_template(instruction, suffix)
-    res = base_llm_generation(model, prompt, "generate-request")
+    res = base_llm_generation(model, llm_collector, prompt, "generate-request")
     return res
 
 
-def generate_request_type(model: Base_LLM, user_request: str, classify_examples: tuple) -> str:
+def generate_request_type(model: Base_LLM, llm_collector: LLMResponseCollector, user_request: str, classify_examples: tuple):
     """
     Genera un tipo de solicitud utilizando un modelo de lenguaje y ejemplos de clasificación.
 
@@ -61,12 +62,12 @@ def generate_request_type(model: Base_LLM, user_request: str, classify_examples:
     """
     instruction, suffix = get_simple_filter_prompt(user_request, classify_examples)
     prompt = model.apply_model_template(instruction, suffix)
-    res = base_llm_generation(model, prompt, "request-type")
+    res = base_llm_generation(model, llm_collector, prompt, "request-type")
     return res
 
 
-def generate_greeting_response_call(model: Base_LLM, memory: Memory) -> str:
+def generate_greeting_response_call(model: Base_LLM, llm_collector: LLMResponseCollector, memory: Memory):
     instruction, suffix = get_greeting_response_prompt(memory)
     prompt = model.apply_model_template(instruction, suffix)
-    res = base_llm_generation(model, prompt, "greeting-response")
+    res = base_llm_generation(model, llm_collector, prompt, "greeting-response")
     return res

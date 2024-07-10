@@ -1,3 +1,5 @@
+from src.components.memory import MEMORY_TYPES
+from src.components.memory.memory import Memory
 from src.components.models.models_interfaces import Base_Embeddings
 from src.utils.reader_utils import read_tables_descriptions
 
@@ -16,6 +18,26 @@ Use the following key format to respond:
 tables: Comma separated list of selected tables.
 
 Begin!"""
+
+related_semantic_tables_template: str = """According to this tables descriptions:
+{descriptions}
+Use this relationships descriptions to find the most related tables to the user request:
+{relations_descriptions_text}
+
+Your task is to pick the most related tables according to the next user request:
+user_request: '''{user_request}'''
+
+Note: Yoy have to answer with database table name instead of the name of the table.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+"tables" is the key and its content is: Comma separated list of selected tables.
+End of Key format
+
+Begin!"""
+
+related_semantic_tables_suffix: str = """tables: """
 
 multi_definition_question_template = """Your task is to generate a question about what should be given by user to make his request clear and reduce ambiguity, follow carefully the next steps:
 
@@ -68,24 +90,17 @@ Begin!"""
 
 complement_request_suffix = "modified_sentence:"
 
-technical_terms_template = """I want to create a dictionary but I need your help to find all possible technical, ambiguous or unknowing terms in the sentence, follow carefully the next steps:
-First, take your time and read carefully the next sentence:
-sentence: '''{user_request}'''
-
-Second, extract technical, ambiguous or unknowing terms.
-
-Third, look at the sentence again and find possible rare names or tags.
-
-Fourth, create a list with extracted terms and erase known common terms that are not related to systems measuring.
-
-Note: Do not create new terms, use only the terms in sentence. You can also use compound words. Do not cut or separate a single word into several words.
+technical_terms_template="""I want to create a dictionary but I need your help to find all possible technical, ambiguous or unknowing terms in the sentence, here are some examples:
+{terms_examples}
+End of examples
 
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format.
-Start Key format:
-key: "terms"
-content: Comma separated list of terms.
-End of Key format"""
+"terms" is the key and its content is: Comma separated list of terms . . .
+End of Key format
+
+Begin!
+sentence: '''{user_request}'''"""
 
 technical_terms_suffix = "terms:"
 
@@ -123,7 +138,7 @@ Technical terms: '''{technical_terms}'''
 
 Suggestions for replacing:
 {replace_instructions}
-Note: Pay attention to the recommendations. When you find a term that needs to be replaced use the suggested one.
+Note: Pay attention to the recommendations. When you find a term that needs to be replaced use the suggested one. Do not add any other comments other than the modified sentence. Do not add your opinions.
 
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format.
@@ -136,6 +151,88 @@ Begin!"""
 
 replace_terms_suffix = "modified_sentence:"
 
+# conversation_summary_instructions = """Follow carefully the next steps:
+
+# First, look up at the next current lines in a conversation between Human and Assistant
+# Current lines:
+# {chat_history}
+
+# Second, look up the current conversation summary
+# Current summary:
+# '''{current_summary}'''
+
+# Third, progressively summarize the new lines provided and merge with previous summary returning a new summary.
+
+# Fourth, evaluation. Evaluate if your new summary answer the question: What is the conversation about?
+ 
+# Note:
+#  - Be detailed with important and sensitive information. 
+#  - You may add sensitive information to your response, like names or technical terms that are mentioned in conversation.
+#  - Do not hallucinate or try to predict the conversation, work exclusively with the new lines.
+#  - Do not include any explanations or apologies in your response.
+#  - Do not add your own conclusions or clarifications.
+#  - Use third grammatical person in your summary. 
+#  - DO NOT give an empty response.
+
+# Output format response:
+# The output should be formatted with the key format below. Do not add anything beyond the key format.
+# Start Key format:
+# "new_summary" is the key and its content is: Summary of the conversation.
+# End of Key format
+
+# Begin!"""
+
+# conversation_summary_suffix="""new_summary: """
+
+request_from_chat_summary_instructions="""I need your help, I'm trying to generate a summarize request from a user in a conversation. Follow carefully the next steps.
+
+First, look up the next messages between HUMAN and AI:
+'''\n{chat_history}\n'''
+
+Second, look up the next relevant definitions from dictionary:
+''''\n{terms}\n''
+
+Third, analyze the messages and briefly describe in one line the human intention and what he is looking for or doing. If you have to complement a term, use only definitions on previous dictionary.
+
+Fourth, evaluation. Evaluate if your response has the necessary information retrieved from the conversation and dictionary. Also it must starts with: 'The human is ...' .
+  
+ - Pay attention if the last message refers to previous ones to add necessary information located in previous messages.
+ - You may add sensitive information to your response, like names or technical terms that are mentioned in conversation.
+ - Do not include any explanations or apologies in your response.
+ - Do not add your own conclusions or clarifications.
+ - Do not add your own thoughts about the request.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+"response" is the key and its content is: Detailed user request. It may start with The human is . . .
+End of Key format
+Begin!"""
+
+request_from_chat_summary_suffix="response: "
+
+def get_request_from_chat_summary_prompt(memory: Memory, terms_dictionary: dict[str, any]):
+    chat_history = memory.get_chat_history_lines(memory.chat_memory)
+    definitions=[]
+        
+    if terms_dictionary:
+        for item in terms_dictionary:
+            for inner_item in item["definitions"]:
+                definitions.append(str(inner_item["definition"]).strip())
+        terms = "    - "
+        
+        content = "\n    - ".join(definitions)
+        terms += f"{content}\n"
+
+    instructions = request_from_chat_summary_instructions.format(chat_history=chat_history, terms=terms)
+    suffix = request_from_chat_summary_suffix
+    return instructions, suffix
+
+# def get_conversation_summary_prompt(memory: Memory):
+#     instruction, suffix = memory.get_summary_prompt_template()
+    
+#     return instruction, suffix
+
 def get_generate_semantic_tables_prompt(
     user_request,
     semantic_tables,
@@ -147,9 +244,9 @@ def get_generate_semantic_tables_prompt(
         for d in data
         if d["table_name"] in semantic_tables
     ]
-    descriptions = "\n".join(
+    descriptions = "\n---------------------------------------------------------------\n".join(
         [
-            f"{doc[2]} table: {doc[1]}.\nDatabase table name: {doc[0]}"
+            f"{doc[2]} table: {doc[1]}\nDatabase table name: {doc[0]}"
             for doc in relevant_descriptions
         ]
     )
@@ -187,10 +284,17 @@ def get_complement_request_prompt(user_request, ai_question, user_response):
     )
 
 
-def get_technical_terms_prompt(user_request):
+def get_technical_terms_prompt(user_request, terms_examples_results):
     """Recomendable usar con el modelo de llama 3 por el suffix, para asi no tener inconvenientes con la respuesta."""
+    examples = []
+    for item in terms_examples_results:
+        example = f"""sentence: {item[1][1]}\nterms: {item[0][1]}"""
+        examples.append(example)
+
+    terms_examples_text = f"""\n{"-"*50}\n""".join(examples)
+    
     return (
-        technical_terms_template.format(user_request=user_request),
+        technical_terms_template.format(user_request=user_request, terms_examples=terms_examples_text),
         technical_terms_suffix,
     )
     

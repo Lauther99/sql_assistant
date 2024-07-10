@@ -12,7 +12,7 @@ def query_by_texts(
     texts: list[str],
     n: Optional[int] = 5,
     score_threshold: Optional[float] = 0.2,
-    metadata_filters: Optional[dict[str, any]] = {},
+    metadata_filters: Optional[dict[str, any]] = None,
 ):
     cleaned_texts = [clean_sentence(text) for text in texts]
     args, _, _, values = inspect.getargvalues(inspect.currentframe())
@@ -48,7 +48,7 @@ def query_by_vector_embedding(
     vector_embedding: list[float],
     n: Optional[int] = 5,
     score_threshold: Optional[float] = 0.8,
-    metadata_filters: Optional[dict[str, any]] = {},
+    metadata_filters: Optional[dict[str, any]] = None,
 ):
     """Querying a Chroma db by vector embedding"""
     args, _, _, values = inspect.getargvalues(inspect.currentframe())

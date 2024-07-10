@@ -4,10 +4,21 @@ from src.db.handlers.handlers import (
     process_searched_columns,
     process_searched_relations,
     query_by_vector_embedding,
+    query_by_texts,
 )
 from src.settings.settings import Settings
 from src.utils.utils import clean_sentence, clean_technical_term
 from chromadb.api.models.Collection import Collection
+
+
+def retrieve_terms_examples(user_request: str, embeddings: Base_Embeddings):
+    collection = Settings.Chroma.get_examples_terms_collection()
+    cleaned_text = clean_sentence(user_request)
+    vector = embeddings.get_embeddings(cleaned_text)
+    results = query_by_vector_embedding(
+        collection=collection, vector_embedding=vector, n=7, score_threshold=0.5
+    )
+    return results
 
 
 def retrieve_sql_semantic_information(
@@ -80,8 +91,10 @@ def retrieve_sql_semantic_information(
 
     # Actualizamos las tablas
     tables.update(nodes)
-    tables_related_info = process_searched_relations(results_relations_collection)
-    tables = set(tables_related_info["tables_related"].keys()).union(tables)
+    tables_related_info = {}
+    if len(results_relations_collection) > 0:
+        tables_related_info = process_searched_relations(results_relations_collection)
+        tables = set(tables_related_info["tables_related"].keys()).union(tables)
 
     # Agregamos las columnas a las tablas
     results_columns_collection = tuple()
@@ -101,7 +114,11 @@ def retrieve_sql_semantic_information(
 
     resultado_columnas = {}
     for table in tables:
-        columns_1 = list(tables_related_info["tables_related"].get(table, []))
+        columns_1 = (
+            list(tables_related_info["tables_related"].get(table, []))
+            if tables_related_info
+            else []
+        )
         columns_2 = list(columns.get(table, []))
         total_columns = columns_1 + columns_2
         resultado_columnas[table] = set(total_columns)
@@ -113,12 +130,16 @@ def retrieve_sql_semantic_information(
     return (
         tables,
         resultado_columnas,
-        tables_related_info["table_relations_descriptions"],
+        (
+            tables_related_info["table_relations_descriptions"]
+            if tables_related_info
+            else []
+        ),
     )
 
 
 def retrieve_semantic_term_definitions(
-    embeddings: Base_Embeddings, terms_collection: Collection, technical_terms_arr
+    embeddings: Base_Embeddings, technical_terms_arr
 ):
     tables = [
         "teq_clasificacion",
@@ -138,7 +159,8 @@ def retrieve_semantic_term_definitions(
     ]
     terms_arr = list()
     has_replacement_definitions = False
-    sql_instructions = False
+    has_sql_instructions = False
+    terms_collection = Settings.Chroma.get_terms_collection()
 
     for term in technical_terms_arr:
         original_term = term
@@ -159,16 +181,19 @@ def retrieve_semantic_term_definitions(
                 if item[2][1].strip():
                     definitions.append(
                         {
-                            "standard_term": item[1][1],
-                            "definition": item[2][1],
-                            "replace_instruction": item[3][1],
-                            # "distance": item[4][1],
+                            "sql_instructions": item[0][1],  # es la sql instruction
+                            "table_name": item[1][1],  # es el nombre de la tabla
+                            "standard_term": item[2][1],  # es el standard term
+                            "definition": item[3][1],  #  es la definicion
+                            "replace_instruction": item[4][1], # es la replace instruction
                         }
                     )
                     has_replacement_definitions = (
                         True if item[3][1].strip() else has_replacement_definitions
                     )
-                    # sql_instructions = True if item[4][1].strip() else sql_instructions
+                    has_sql_instructions = (
+                        True if item[0][1].strip() else has_sql_instructions
+                    )
 
         if definitions:
             terms_arr.append(
@@ -179,4 +204,4 @@ def retrieve_semantic_term_definitions(
                 }
             )
 
-    return terms_arr, has_replacement_definitions, sql_instructions
+    return terms_arr, has_replacement_definitions, has_sql_instructions

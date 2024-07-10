@@ -7,6 +7,7 @@ src/db/chroma_db
 src/components/memory/__pycache__
 src/document_indexing/data_functions/__pycache__
 src/components/models/__pycache__/
+src/components/collector/__pycache__/
 src/db/handlers/__pycache__/
 src/components/models/embeddings/__pycache__
 src/components/models/llms/__pycache__
