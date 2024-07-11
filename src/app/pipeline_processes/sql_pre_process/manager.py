@@ -32,7 +32,6 @@ def complex_request_process_modification(
 ):
     # Parte 1: Resumiendo la conversacion
     output = generate_chat_summary(llm, memory, llm_collector)
-    # output = memory.generate_summary(llm, llm_collector)
     chat_summary = str(output["new_summary"]).strip()
 
     # Parte 2: Encontrando y generando terminos tecnicos de la conversacion
@@ -50,7 +49,7 @@ def complex_request_process_modification(
         llm, memory, llm_collector, terms_dictionary
     )
     user_request = output["response"]
-    
+    complemented_user_request = None
     if has_replacement_definitions:
         # Parte 5: Identificando posible multidefinicion y claridad del requerimiento
         output = generate_multi_definition_detector(
@@ -74,7 +73,7 @@ def complex_request_process_modification(
     collector.conversation_summary = chat_summary
     collector.terms_dictionary = terms_dictionary
     collector.technical_terms = technical_terms
-    collector.modified_user_request = complemented_user_request
+    collector.modified_user_request = complemented_user_request   
     collector.flavored_request_for_semantic_search = (
         flavored_request_for_semantic_search
     )

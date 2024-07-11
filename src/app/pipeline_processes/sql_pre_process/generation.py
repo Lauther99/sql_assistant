@@ -104,7 +104,7 @@ def generate_flavored_request(
 ):
     instruction, suffix = get_modified_request_prompt(user_request, terms_dictionary)
     prompt = model.apply_model_template(instruction, suffix)
-    output = base_llm_generation(model, llm_collector, prompt, "modified-request")
+    output = base_llm_generation(model, llm_collector, prompt, "flavored-request")
 
     return output
 
@@ -126,5 +126,5 @@ def generate_request_from_chat_summary(
 ):
     instruction, suffix = get_request_from_chat_summary_prompt(memory, terms_dictionary)
     prompt = model.apply_model_template(instruction, suffix)
-    output = base_llm_generation(model, llm_collector, prompt, "enhanced-request-conversation")
+    output = base_llm_generation(model, llm_collector, prompt, "enhanced-request")
     return output

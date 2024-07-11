@@ -119,11 +119,12 @@ class Memory:
             for message in chat_memory:
                 if message.message_type == MEMORY_TYPES["HUMAN"]:
                     message_content = message.message
-                    new_lines += f"\nHuman line: {message_content}"
+                    new_lines += f"\n<Human>{message_content}</Human>"
                 elif message.message_type == MEMORY_TYPES["AI"]:
-                    new_lines += f"\nAssistant line: {message.message}"
                     if message.dataframe is not None:
-                        new_lines += f"\nAssistant DataFrame: \n{message.dataframe.head(10).to_markdown()}"
+                        new_lines += f"\n<Assistant>\n{message.message}\nHere is a dataframe from SQL: \n{message.dataframe.head(10).to_markdown()}\n</Assistant>"
+                    else:
+                        new_lines += f"\n<Assistant>{message.message}</Assistant>"
                 else:
                     message_type = message.message_type
                     raise ValueError(f"Not support message type: {message_type}")

@@ -192,12 +192,13 @@ First, look up the next messages between HUMAN and AI:
 Second, look up the next relevant definitions from dictionary:
 ''''\n{terms}\n''
 
-Third, analyze the messages and briefly describe in one line the human intention and what he is looking for or doing. If you have to complement a term, use only definitions on previous dictionary.
+Third, analyze the messages and briefly describe in one line the last human intention and what he is looking for. If you have to complement a term, use only definitions on previous dictionary.
 
-Fourth, evaluation. Evaluate if your response has the necessary information retrieved from the conversation and dictionary. Also it must starts with: 'The human is ...' .
+Fourth, evaluation. Evaluate if your response has the necessary information retrieved from the conversation and dictionary. Also it must starts with: 'The human is ...' and must answer the question: What is exactly the last thing the human is asking for?.
   
  - Pay attention if the last message refers to previous ones to add necessary information located in previous messages.
  - You may add sensitive information to your response, like names or technical terms that are mentioned in conversation.
+ - You may add dates if these are given.
  - Do not include any explanations or apologies in your response.
  - Do not add your own conclusions or clarifications.
  - Do not add your own thoughts about the request.
