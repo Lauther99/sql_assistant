@@ -77,6 +77,15 @@ class HF_Llama38b_LLM(Base_LLM):
         response = {}
         json_payload = {
             "inputs": input,
+            "parameters": {
+                "max_length": 8000,
+                "temperature": 0.5,
+                "max_new_tokens": 4000,
+            },
+            "options": {
+                "use_cache": False,
+                "wait_for_model": True,
+            }
         }
 
         try:
@@ -99,7 +108,9 @@ class HF_Llama38b_LLM(Base_LLM):
 
             # Procesa la respuesta JSON
             try:
-                response["text"] = str(output[0]["generated_text"]).split("assistant<|end_header_id|>")[1]
+                response["text"] = str(output[0]["generated_text"]).split(
+                    "assistant<|end_header_id|>"
+                )[1]
             except (IndexError, KeyError) as e:
                 print(f"Error al procesar la respuesta JSON: {e}")
                 print(output)

@@ -5,13 +5,13 @@ from src.app.pipeline_processes.sql_pre_process.prompts import (
     get_generate_semantic_tables_prompt,
     get_multi_definition_question_prompt,
     get_complement_request_prompt,
-    get_request_from_chat_summary_prompt,
+    get_enhanced_request_prompt,
     get_technical_terms_prompt,
     get_multi_definition_detector_prompt,
     get_modified_request_prompt,
 )
 from src.utils.utils import string_2_array
-from src.components.collector.collector import LLMResponseCollector
+from src.components.collector.collector import LLMResponseCollector, AppDataCollector
 
 
 def generate_semantic_info(
@@ -108,23 +108,24 @@ def generate_flavored_request(
 
     return output
 
-def generate_chat_summary(
-    model: Base_LLM,
-    memory: Memory,
-    llm_collector: LLMResponseCollector,
-):
-    instruction, suffix = memory.get_summary_prompt_template()
-    prompt = model.apply_model_template(instruction, suffix)
-    output = base_llm_generation(model, llm_collector, prompt, "summary-conversation")
-    return output
+# def generate_chat_summary(
+#     model: Base_LLM,
+#     memory: Memory,
+#     llm_collector: LLMResponseCollector,
+#     collector: AppDataCollector,
+# ):
+#     instruction, suffix = memory.get_summary_prompt_template()
+#     prompt = model.apply_model_template(instruction, suffix)
+#     output = base_llm_generation(model, llm_collector, prompt, "summary-conversation")
+#     return output
 
-def generate_request_from_chat_summary(
+def generate_enhanced_request(
     model: Base_LLM,
-    memory: Memory,
     llm_collector: LLMResponseCollector,
-    terms_dictionary,
+    collector: AppDataCollector,
 ):
-    instruction, suffix = get_request_from_chat_summary_prompt(memory, terms_dictionary)
+    
+    instruction, suffix = get_enhanced_request_prompt(collector)
     prompt = model.apply_model_template(instruction, suffix)
     output = base_llm_generation(model, llm_collector, prompt, "enhanced-request")
     return output

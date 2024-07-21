@@ -3,8 +3,9 @@ from src.components.models.models_interfaces import Base_LLM
 from src.components.collector.collector import AppDataCollector, LLMResponseCollector
 
 
-def query_post_process(llm: Base_LLM, collector: AppDataCollector, llm_collector: LLMResponseCollector, user_message: str):
+def query_post_process(llm: Base_LLM, collector: AppDataCollector, llm_collector: LLMResponseCollector):
     actual_answer = collector.ai_pre_response
+    user_message = collector.current_conversation_data.last_user_message.message
     
     response = translate_response(llm, llm_collector, user_message, actual_answer)
     

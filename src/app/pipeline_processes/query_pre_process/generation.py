@@ -2,14 +2,19 @@ from src.components.memory.memory import Memory
 from src.components.models.models_interfaces import Base_LLM
 from src.app.rag.rag_utils import base_llm_generation
 from src.app.pipeline_processes.query_pre_process.prompts import (
-    get_generate_request_prompt,
     get_greeting_response_prompt,
     get_simple_filter_prompt,
 )
-from src.components.collector.collector import LLMResponseCollector
+from src.components.collector.collector import LLMResponseCollector, AppDataCollector
+from src.components.memory.memory_interfaces import HumanMessage, AIMessage
 
 
-def generate_request(model: Base_LLM, llm_collector: LLMResponseCollector, memory: Memory):
+def generate_request(
+    model: Base_LLM,
+    llm_collector: LLMResponseCollector,
+    collector: AppDataCollector,
+    memory: Memory,
+):
     """
     Genera una solicitud utilizando un modelo de lenguaje y un contexto de memoria.
 
@@ -22,7 +27,7 @@ def generate_request(model: Base_LLM, llm_collector: LLMResponseCollector, memor
 
     ### Returns:
     - `dict`: Un diccionario con una única clave `'intention'`, que tiene un valor de cadena representando la intención de la solicitud.
-    
+
     ### Ejemplo de respuesta:
     ```json
     {
@@ -30,13 +35,33 @@ def generate_request(model: Base_LLM, llm_collector: LLMResponseCollector, memor
     }
     ```
     """
-    instruction, suffix = get_generate_request_prompt(memory)
+    user_message = collector.current_conversation_data.last_user_message
+    ai_message = collector.current_conversation_data.last_ai_message
+    dictionary = collector.terms_dictionary
+    current_slots = collector.current_conversation_data.current_slots
+    current_conversation_summary = (
+        collector.current_conversation_data.current_conversation_summary
+    )
+
+    instruction, suffix = memory.get_new_summary_instruction(
+        user_message=user_message,
+        ai_message=ai_message,
+        current_slots=current_slots,
+        current_summary=current_conversation_summary,
+        dictionary=dictionary
+    )
+    
     prompt = model.apply_model_template(instruction, suffix)
     res = base_llm_generation(model, llm_collector, prompt, "generate-request")
     return res
 
 
-def generate_request_type(model: Base_LLM, llm_collector: LLMResponseCollector, user_request: str, classify_examples: tuple):
+def generate_request_type(
+    model: Base_LLM,
+    llm_collector: LLMResponseCollector,
+    user_request: str,
+    classify_examples: tuple,
+):
     """
     Genera un tipo de solicitud utilizando un modelo de lenguaje y ejemplos de clasificación.
 
@@ -50,7 +75,7 @@ def generate_request_type(model: Base_LLM, llm_collector: LLMResponseCollector, 
     - `classify_examples (tuple)`: Ejemplos utilizados para ayudar a clasificar la solicitud.
 
     ### Returns:
-    - `str`: Una cadena que describe el tipo de solicitud. 
+    - `str`: Una cadena que describe el tipo de solicitud.
 
     ### Ejemplo de respuesta:
     ```json
@@ -66,8 +91,13 @@ def generate_request_type(model: Base_LLM, llm_collector: LLMResponseCollector, 
     return res
 
 
-def generate_greeting_response_call(model: Base_LLM, llm_collector: LLMResponseCollector, memory: Memory):
-    instruction, suffix = get_greeting_response_prompt(memory)
+def generate_greeting_response_call(
+    model: Base_LLM, llm_collector: LLMResponseCollector, collector: AppDataCollector,
+):
+    last_user_message = collector.current_conversation_data.last_user_message
+    last_ai_message = collector.current_conversation_data.last_ai_message
+    
+    instruction, suffix = get_greeting_response_prompt(last_user_message, last_ai_message)
     prompt = model.apply_model_template(instruction, suffix)
     res = base_llm_generation(model, llm_collector, prompt, "greeting-response")
     return res

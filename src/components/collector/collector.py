@@ -1,12 +1,24 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 import pandas as pd
+from src.components.memory.memory_interfaces import HumanMessage, AIMessage
 
+class ConversationData(ABC):
+    def __init__(self):
+        self.current_conversation_summary: Optional[str] = None 
+        self.current_slots: Optional[str] = None 
+        self.last_user_message: Optional[HumanMessage] = None 
+        self.last_ai_message: Optional[AIMessage] = None 
+        
 
 class AppDataCollector(ABC):
     def __init__(self):
+        self.current_conversation_data: Optional[ConversationData] = ConversationData()
+        
         self.conversation_summary: Optional[str] = None
+        self.conversation_slots: Optional[str] = None
         self.user_request: Optional[str] = None
+
         self.modified_user_request: Optional[str] = None
         self.request_type: Optional[str] = None
         self.simple_response: Optional[str] = None
@@ -27,6 +39,7 @@ class AppDataCollector(ABC):
 
         self.ai_post_response: Optional[str] = None
         self.detected_language: Optional[str] = None
+        
 
     def __repr__(self):
         return (

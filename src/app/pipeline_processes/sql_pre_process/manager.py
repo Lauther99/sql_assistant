@@ -7,11 +7,10 @@ from src.app.pipeline_processes.sql_pre_process.retrievers import (
 )
 from src.app.pipeline_processes.query_pre_process.manager import query_pre_process
 from src.app.pipeline_processes.sql_pre_process.generation import (
-    generate_chat_summary,
     generate_flavored_request,
     generate_multi_definition_detector,
     generate_multi_definition_question,
-    generate_request_from_chat_summary,
+    generate_enhanced_request,
     generate_semantic_info,
     generate_technical_terms,
 )
@@ -31,8 +30,10 @@ def complex_request_process_modification(
     llm_collector: LLMResponseCollector,
 ):
     # Parte 1: Resumiendo la conversacion
-    output = generate_chat_summary(llm, memory, llm_collector)
-    chat_summary = str(output["new_summary"]).strip()
+    # output = generate_chat_summary(llm, memory, llm_collector)
+    chat_summary = str(
+        collector.current_conversation_data.current_conversation_summary
+    ).strip()
 
     # Parte 2: Encontrando y generando terminos tecnicos de la conversacion
     terms_examples = retrieve_terms_examples(chat_summary, embeddings)
@@ -43,13 +44,13 @@ def complex_request_process_modification(
     terms_dictionary, has_replacement_definitions, _ = (
         retrieve_semantic_term_definitions(embeddings, technical_terms)
     )
-    
-    # Parte 4: Con el diccionario y el resumen, generamos un requerimiento más preciso
-    output = generate_request_from_chat_summary(
-        llm, memory, llm_collector, terms_dictionary
-    )
+
+    # Parte 4: Con los Slots y el request anterior generamos un request mas preciso
+    output = generate_enhanced_request(llm, llm_collector, collector)
     user_request = output["response"]
+
     complemented_user_request = None
+
     if has_replacement_definitions:
         # Parte 5: Identificando posible multidefinicion y claridad del requerimiento
         output = generate_multi_definition_detector(
@@ -68,12 +69,11 @@ def complex_request_process_modification(
         flavored_request_for_semantic_search = output["modified_sentence"]
     else:
         flavored_request_for_semantic_search = user_request
-        complemented_user_request=user_request
-    
-    collector.conversation_summary = chat_summary
+        complemented_user_request = user_request
+
     collector.terms_dictionary = terms_dictionary
     collector.technical_terms = technical_terms
-    collector.modified_user_request = complemented_user_request   
+    collector.modified_user_request = complemented_user_request
     collector.flavored_request_for_semantic_search = (
         flavored_request_for_semantic_search
     )

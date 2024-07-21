@@ -1,130 +1,166 @@
 import sys
 
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
-from src.components.collector.collector import LLMResponseCollector
-from src.app.rag.rag_utils import base_llm_generation
-from src.settings.settings import Settings
-from src.components.models.models_interfaces import Base_LLM
+from src.components.memory.memory_interfaces import AIMessage, HumanMessage
 from src.components.memory import MEMORY_TYPES
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
-from typing import List, Dict, Optional
+from typing import List, Optional, Union
 import pandas as pd
-from abc import ABC, abstractmethod
 
-memory_prompt_instruction: str = """Follow carefully the next steps:
+summary_instruction_with_dictionary: str = """I need your help with a very important task for my work. Follow carefully this instructions step by step.
 
-First, look up at the next current lines in a conversation between Human and Assistant
-Current lines:
+First, read this current summary and prevalent slots of a conversation between a virtual assistant and a user:
+<Summary>{current_summary}</Summary>
+<Slots>{current_slots}</Slots>
+
+Second, read this new lines to the conversation:
 {chat_history}
 
-Second, look up the current conversation summary
-Current summary:
-'''{current_summary}'''
+Third, read this term definitions from dictionary:
+{dictionary}
 
-Third, progressively summarize the new lines provided and merge with previous summary returning a new summary.
+Fourth, summarization. Summarize step by step the new lines and add this new summary to the previous summary.
 
-Fourth, evaluation. Evaluate if your new summary answer the question: What is the conversation about?
- 
-Note:
- - Be detailed with important and sensitive information. 
- - You may add sensitive information to your response, like names or technical terms that are mentioned in conversation.
- - Do not hallucinate or try to predict the conversation, work exclusively with the new lines.
- - Do not include any explanations or apologies in your response.
- - Do not add your own conclusions or clarifications.
- - Use third grammatical person in your summary. 
- - DO NOT give an empty response.
+Fifth, user intent. Find the current user intention at this particular point of the conversation.
+
+Sixth, slots. Find the prevalent slots that are necessary to the current intention.
+
+Finally, evaluation:
+- The summary should describe step by step the conversation. A correct summary should contains the slots mentioned in conversation and answer the question: "What does user and assistant talking about?".
+- The user intent should contain the relevant slots he mention along the conversation. A correct intent should answer the question: "What does the user want at this point in the conversation?". 
+
+Note that it is possible that not all conversation history is relevant and you need to summarise based on what is relevant. If the user does not have a goal at this point the intent just aim on what is the user doing: “The user is ...”.
 
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format.
 Start Key format:
-"new_summary" is the key and its content is: Summary of the conversation.
+"summary" is the key and its content: Detailed summary of the current conversation in one line, do not make break lines.
+"user_intent" is the key and its content: Detailed current user goal at this point of the conversation.
+"slots" is the key and its content: Comma separated dictionary with slots and its values identified at this point of the conversation in one line, do not make break lines.
 End of Key format
 
 Begin!"""
 
-memory_prompt_suffix = """new_summary: """
+summary_instruction_no_dictionary: str = """I need your help with a very important task for my work. Follow carefully this instructions step by step.
 
+First, read this current summary and prevalent slots of a conversation between a virtual assistant and a user:
+<Summary>{current_summary}</Summary>
+<Slots>{current_slots}</Slots>
 
-class Base_Message(ABC):
-    def __init__(self):
-        self.message = ""
-        self.message_type = ""
+Second, read this new lines to the conversation:
+{chat_history}
 
+Third, summarization. Summarize step by step the new lines and add this new summary to the previous summary.
 
-class AIMessage(Base_Message):
-    def __init__(self) -> None:
-        super().__init__()
-        self.dataframe: Optional[pd.DataFrame] = None
+Fourth, user intent. Find the current user intention at this particular point of the conversation.
 
-    def __repr__(self):
-        return f"AIMessage(message={self.message!r}, dataframe={self.dataframe!r})"
+Fifth, slots. Find the prevalent slots that are necessary to the current intention.
 
+Finally, evaluation:
+- The summary should describe step by step the conversation. A correct summary should contains the slots mentioned in conversation and answer the question: "What does user and assistant talking about?".
+- The user intent should contain the relevant slots he mention along the conversation. A correct intent should answer the question: "What does the user want at this point in the conversation?". 
 
-class HumanMessage(Base_Message):
-    def __init__(self) -> None:
-        super().__init__()
+Note that it is possible that not all conversation history is relevant and you need to summarise based on what is relevant. If the user does not have a goal at this point the intent just aim on what is the user doing: “The user is ...”.
 
-    def __repr__(self):
-        return f"HumanMessage(message={self.message!r})"
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+"summary" is the key and its content: Detailed summary of the current conversation in one line, do not make break lines.
+"user_intent" is the key and its content: Detailed current user goal at this point of the conversation.
+"slots" is the key and its content: Comma separated dictionary with slots and its values identified at this point of the conversation in one line, do not make break lines.
+End of Key format
+
+Begin!"""
+
+summary_instruction_suffix = """summary: """
 
 
 class Memory:
-    def __init__(self) -> None:
-        self.chat_memory: list[Base_Message] = []
-
+    
+    def __init__(self, chat: List[Union[AIMessage, HumanMessage]] = []) -> None:
+        self.chat_memory = chat
+    
     # Chat management
-    def add_user_message(self, message: str):
-        human_message = HumanMessage()
-
-        if (
-            len(self.chat_memory) == 0
-            or self.chat_memory[-1].message_type == MEMORY_TYPES["AI"]
-        ):
-            human_message.message = message
-            human_message.message_type = MEMORY_TYPES["HUMAN"]
-            self.chat_memory.append(human_message)
-            return
-        raise ValueError("Cannot add Human message")
-
-    def add_ai_message(self, message: str, df: Optional[pd.DataFrame] = None):
-        ai_message = AIMessage()
-        if (
-            len(self.chat_memory) > 0
-            and self.chat_memory[-1].message_type == MEMORY_TYPES["HUMAN"]
-        ):
-            ai_message.message_type = MEMORY_TYPES["AI"]
-            ai_message.message = message
-            ai_message.dataframe = df
-            self.chat_memory.append(ai_message)
-            return
-        raise ValueError("Can not add AI message")
-
-    def get_summary_prompt_template(
-        self,
-        existing_summary: str = "The next is a conversation between Assistant and Human",
+    def add_user_message(
+        self, message: str
     ):
-        new_lines: str = self.get_chat_history_lines(self.chat_memory)
-        instruction = memory_prompt_instruction.format(
-            current_summary=existing_summary, chat_history=new_lines
-        )
-        suffix = memory_prompt_suffix
+        # ToDo: Llamada a la base de datos para agregar el mensaje al chat
+        human_message = HumanMessage()
+        human_message.message = message
+        human_message.message_type = MEMORY_TYPES["HUMAN"]
+        self.chat_memory.append(human_message)
+        return human_message
 
+    def add_ai_message(
+        self,
+        message: str,
+        replied_user_message_id: str,
+        df: Optional[pd.DataFrame] = None,
+    ):
+        # ToDo: Llamada a la base de datos para agregar el mensaje al chat
+        ai_message = AIMessage(replied_user_message_id)
+        ai_message.message_type = MEMORY_TYPES["AI"]
+        ai_message.message = message
+        ai_message.dataframe = df
+        self.chat_memory.append(ai_message)
+        return ai_message
+
+    def get_new_summary_instruction(
+        self,
+        user_message: HumanMessage,
+        ai_message: AIMessage = None,
+        current_summary: str = None,
+        current_slots: str = None,
+        dictionary = None,
+    ):
+        current_summary = "The next is a conversation between Assistant and Human." if current_summary is None else current_summary
+        new_lines = ""
+        if ai_message is None:
+            new_lines = f"""<User>{user_message.message}</User>"""
+        else:
+            if ai_message.dataframe is not None:
+                new_lines = f"""<User>{user_message.message}</User>\n<Assistant>\n{ai_message.message}\nHere is a dataframe: \n{ai_message.dataframe}</Assistant>"""
+            else:
+                new_lines = f"""<User>{user_message.message}</User>\n<Assistant>{ai_message.message}</Assistant>"""
+
+        if dictionary is not None:
+            definitions = []
+            for item in dictionary:
+                for inner_item in item["definitions"]:
+                    definitions.append(str(inner_item["definition"]).strip())
+            terms = "    - "
+            content = "\n    - ".join(definitions)
+            terms += f"{content}\n"
+                
+            instruction = summary_instruction_with_dictionary.format(
+                current_summary=current_summary,
+                current_slots=current_slots,
+                chat_history=new_lines,
+                dictionary=terms
+            )
+        else:
+            instruction = summary_instruction_no_dictionary.format(
+                current_summary=current_summary,
+                current_slots=current_slots,
+                chat_history=new_lines,
+            )
+        
+        suffix = summary_instruction_suffix
         return instruction, suffix
 
-    @staticmethod
-    def get_chat_history_lines(chat_memory: list[Base_Message]):
+    def list_chat_messages(self):
         new_lines: str = ""
-        if len(chat_memory) > 0:
-            for message in chat_memory:
+        if len(self.chat_memory) > 0:
+            for message in self.chat_memory:
                 if message.message_type == MEMORY_TYPES["HUMAN"]:
                     message_content = message.message
-                    new_lines += f"\n<Human>{message_content}</Human>"
+                    new_lines += (
+                        f"\n<Human>: {message.date_created}\n{message_content}"
+                    )
                 elif message.message_type == MEMORY_TYPES["AI"]:
                     if message.dataframe is not None:
-                        new_lines += f"\n<Assistant>\n{message.message}\nHere is a dataframe from SQL: \n{message.dataframe.head(10).to_markdown()}\n</Assistant>"
+                        new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}\nHere is a dataframe from SQL: \n{message.dataframe.head(10).to_markdown()}"
                     else:
-                        new_lines += f"\n<Assistant>{message.message}</Assistant>"
+                        new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}"
                 else:
                     message_type = message.message_type
                     raise ValueError(f"Not support message type: {message_type}")
@@ -132,6 +168,3 @@ class Memory:
             raise ValueError("Not messages found in the current conversation")
 
         return new_lines
-
-    def clear_memory(self):
-        self.chat_memory = []

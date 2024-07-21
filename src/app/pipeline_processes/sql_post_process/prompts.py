@@ -33,17 +33,16 @@ End of instructions
 Database schema:
 {tables}
 End of Database schema.
-Note: A placeholder looks like: '<Name of placeholder>'
+Note: A placeholder looks like: '<Name of placeholder>'. It is not necessary to JOIN all the tables.
+
 
 Output format response:
-The output should be formatted with the key format below. Do not add anything beyond the key format. Avoid add the terms 'key' or 'content' as part of the format.
+The output should be formatted with the key format below. Do not add anything beyond the key format.
 Start Key format:
-key: "class"
-content: complete or incomplete.
-key: "analysis"
-content: Your brief analysis.
-key: "suggestion"
-content: A brief recommendation for the user about the missing information to have better results.
+- "class" is the key and its content is: complete or incomplete.
+- "analysis" is the key and its content is: Your brief analysis in one line, do not make break lines.
+- "suggestion" is the key and its content is: A brief recommendation for the user about the missing information to have better results, do not make break lines.
+- "suggested_sql" is the key and its content is: SQL SERVER 2014 code query sugested in one line, do not make break lines.
 End of Key format
 
 Begin!
@@ -87,7 +86,7 @@ Note:
 generate_summary_no_intents_suffix = """Note: You can make brief suggestion for user query to mention dates or names to retrieve better information from database.
 
 Use the following key format to respond:
-response: Your briefly response.
+response: Your briefly response in one line, do not make line breaks.
 
 Begin!"""
 
@@ -103,8 +102,7 @@ Do not include the pandas DataFrame in your response.
 If you have to refer to something in the dataframe refer it as in 'the list'."""
 
 generate_summary_with_intents_suffix = """Use the following key format to respond:
-user_request: The asked user request.
-response: Your briefly question.
+response: Your briefly question in one line, do not make line breaks.
 
 Begin!"""
 

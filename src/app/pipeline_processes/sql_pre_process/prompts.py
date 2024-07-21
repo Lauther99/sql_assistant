@@ -2,6 +2,7 @@ from src.components.memory import MEMORY_TYPES
 from src.components.memory.memory import Memory
 from src.components.models.models_interfaces import Base_Embeddings
 from src.utils.reader_utils import read_tables_descriptions
+from src.components.collector.collector import AppDataCollector
 
 
 related_semantic_tables_template: str = """According to this tables descriptions:
@@ -90,7 +91,7 @@ Begin!"""
 
 complement_request_suffix = "modified_sentence:"
 
-technical_terms_template="""I want to create a dictionary but I need your help to find all possible technical, ambiguous or unknowing terms in the sentence, here are some examples:
+technical_terms_template = """I want to create a dictionary but I need your help to find all possible technical, ambiguous or unknowing terms in the sentence, here are some examples:
 {terms_examples}
 End of examples
 
@@ -151,88 +152,44 @@ Begin!"""
 
 replace_terms_suffix = "modified_sentence:"
 
-# conversation_summary_instructions = """Follow carefully the next steps:
+enhanced_request_instruction: str = """I need your help with a very important task for my work. Follow carefully this instructions step by step.
 
-# First, look up at the next current lines in a conversation between Human and Assistant
-# Current lines:
-# {chat_history}
+First, read this current user intent:
+The next is a conversation between Assistant and Human.
+<user_intent>{user_intent}</user_intent> 
 
-# Second, look up the current conversation summary
-# Current summary:
-# '''{current_summary}'''
+Second, the next are relevant slots from a conversation that are necessary to complete the previous user intent:
+<Slots>{current_slots}</Slots>
 
-# Third, progressively summarize the new lines provided and merge with previous summary returning a new summary.
+Third, complementation. Add to the user intent the necessary slots to generate a complete and better user intent.
 
-# Fourth, evaluation. Evaluate if your new summary answer the question: What is the conversation about?
- 
-# Note:
-#  - Be detailed with important and sensitive information. 
-#  - You may add sensitive information to your response, like names or technical terms that are mentioned in conversation.
-#  - Do not hallucinate or try to predict the conversation, work exclusively with the new lines.
-#  - Do not include any explanations or apologies in your response.
-#  - Do not add your own conclusions or clarifications.
-#  - Use third grammatical person in your summary. 
-#  - DO NOT give an empty response.
-
-# Output format response:
-# The output should be formatted with the key format below. Do not add anything beyond the key format.
-# Start Key format:
-# "new_summary" is the key and its content is: Summary of the conversation.
-# End of Key format
-
-# Begin!"""
-
-# conversation_summary_suffix="""new_summary: """
-
-request_from_chat_summary_instructions="""I need your help, I'm trying to generate a summarize request from a user in a conversation. Follow carefully the next steps.
-
-First, look up the next messages between HUMAN and AI:
-'''\n{chat_history}\n'''
-
-Second, look up the next relevant definitions from dictionary:
-''''\n{terms}\n''
-
-Third, analyze the messages and briefly describe in one line the last human intention and what he is looking for. If you have to complement a term, use only definitions on previous dictionary.
-
-Fourth, evaluation. Evaluate if your response has the necessary information retrieved from the conversation and dictionary. Also it must starts with: 'The human is ...' and must answer the question: What is exactly the last thing the human is asking for?.
-  
- - Pay attention if the last message refers to previous ones to add necessary information located in previous messages.
- - You may add sensitive information to your response, like names or technical terms that are mentioned in conversation.
- - You may add dates if these are given.
- - Do not include any explanations or apologies in your response.
- - Do not add your own conclusions or clarifications.
- - Do not add your own thoughts about the request.
+Finally, evaluation:
+- The user intent should contain the relevant slots. A correct intent should answer the question: "What does the user want?". 
+- Do not add your own ideas or clarifications or recommendations.
 
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format.
 Start Key format:
-"response" is the key and its content is: Detailed user request. It may start with The human is . . .
+"response" is the key and its content: Detailed current user goal, it may starts with "The user is ...".
 End of Key format
+
 Begin!"""
+enhanced_request_suffix = "response: "
 
-request_from_chat_summary_suffix="response: "
 
-def get_request_from_chat_summary_prompt(memory: Memory, terms_dictionary: dict[str, any]):
-    chat_history = memory.get_chat_history_lines(memory.chat_memory)
-    definitions=[]
-        
-    if terms_dictionary:
-        for item in terms_dictionary:
-            for inner_item in item["definitions"]:
-                definitions.append(str(inner_item["definition"]).strip())
-        terms = "    - "
-        
-        content = "\n    - ".join(definitions)
-        terms += f"{content}\n"
+def get_enhanced_request_prompt(collector: AppDataCollector):
+    current_user_intent = collector.user_request
+    current_slots = collector.current_conversation_data.current_slots
 
-    instructions = request_from_chat_summary_instructions.format(chat_history=chat_history, terms=terms)
-    suffix = request_from_chat_summary_suffix
+
+    instructions = enhanced_request_instruction.format(
+        user_intent=current_user_intent,
+        current_slots=current_slots
+    )
+    suffix = enhanced_request_suffix
+
     return instructions, suffix
 
-# def get_conversation_summary_prompt(memory: Memory):
-#     instruction, suffix = memory.get_summary_prompt_template()
-    
-#     return instruction, suffix
 
 def get_generate_semantic_tables_prompt(
     user_request,
@@ -245,11 +202,13 @@ def get_generate_semantic_tables_prompt(
         for d in data
         if d["table_name"] in semantic_tables
     ]
-    descriptions = "\n---------------------------------------------------------------\n".join(
-        [
-            f"{doc[2]} table: {doc[1]}\nDatabase table name: {doc[0]}"
-            for doc in relevant_descriptions
-        ]
+    descriptions = (
+        "\n---------------------------------------------------------------\n".join(
+            [
+                f"{doc[2]} table: {doc[1]}\nDatabase table name: {doc[0]}"
+                for doc in relevant_descriptions
+            ]
+        )
     )
     relations_descriptions_text = "\n".join(
         [f" - {doc}" for doc in semantic_relations_descriptions]
@@ -293,15 +252,18 @@ def get_technical_terms_prompt(user_request, terms_examples_results):
         examples.append(example)
 
     terms_examples_text = f"""\n{"-"*50}\n""".join(examples)
-    
+
     return (
-        technical_terms_template.format(user_request=user_request, terms_examples=terms_examples_text),
+        technical_terms_template.format(
+            user_request=user_request, terms_examples=terms_examples_text
+        ),
         technical_terms_suffix,
     )
-    
+
+
 def get_multi_definition_detector_prompt(user_request, terms_dictionary):
     """Recomendable usar con el modelo de llama 3 por el suffix, para asi no tener inconvenientes con la respuesta."""
-    
+
     definitions = ""
     technical_terms_arr = list()
     for _, item in enumerate(terms_dictionary):
@@ -316,8 +278,9 @@ def get_multi_definition_detector_prompt(user_request, terms_dictionary):
     instruction = multi_definition_detector_prompt.format(
         technical_terms=technical_terms, definitions=definitions, sentence=user_request
     )
-    
+
     return instruction, multi_definition_detector_suffix
+
 
 def get_modified_request_prompt(user_request, terms_dictionary):
     replace_instructions = ""
