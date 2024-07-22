@@ -3,7 +3,7 @@ import sys
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
 from src.components.memory.memory_interfaces import AIMessage, HumanMessage
 from src.components.memory import MEMORY_TYPES
-from typing import List, Optional, Union
+from typing import Any, Hashable, List, Optional, Union
 import pandas as pd
 
 summary_instruction_with_dictionary: str = """I need your help with a very important task for my work. Follow carefully this instructions step by step.
@@ -20,18 +20,18 @@ Third, read this term definitions from dictionary:
 
 Fourth, summarization. Summarize step by step the new lines and add this new summary to the previous summary.
 
-Fifth, user intent. Find the current user intention at this particular point of the conversation.
+Fifth, user intent. Find the exactly current user intention at this particular point of the conversation. Be specific by mentioning the slots and any other data mentioned in conversation.
 
-Sixth, slots. Find the prevalent slots that are necessary to the current intention.
+Sixth, slots. Find the prevalent slots to the conversation.
 
 Finally, evaluation:
 - The summary should describe step by step the conversation. A correct summary should contains the slots mentioned in conversation and answer the question: "What does user and assistant talking about?".
-- The user intent should contain the relevant slots he mention along the conversation. A correct intent should answer the question: "What does the user want at this point in the conversation?". 
+- The user intent should contain the relevant slots he mention along the conversation. A correct intent should answer the question: "What does the user want at this point in the conversation?".
 
 Note that it is possible that not all conversation history is relevant and you need to summarise based on what is relevant. If the user does not have a goal at this point the intent just aim on what is the user doing: “The user is ...”.
 
 Output format response:
-The output should be formatted with the key format below. Do not add anything beyond the key format.
+The output should be formatted with the key format below. Do not add any comment before or after the key format. Just this format please.
 Start Key format:
 "summary" is the key and its content: Detailed summary of the current conversation in one line, do not make break lines.
 "user_intent" is the key and its content: Detailed current user goal at this point of the conversation.
@@ -51,7 +51,7 @@ Second, read this new lines to the conversation:
 
 Third, summarization. Summarize step by step the new lines and add this new summary to the previous summary.
 
-Fourth, user intent. Find the current user intention at this particular point of the conversation.
+Fourth, user intent. Find the exactly current user intention at this particular point of the conversation.
 
 Fifth, slots. Find the prevalent slots that are necessary to the current intention.
 
@@ -62,7 +62,7 @@ Finally, evaluation:
 Note that it is possible that not all conversation history is relevant and you need to summarise based on what is relevant. If the user does not have a goal at this point the intent just aim on what is the user doing: “The user is ...”.
 
 Output format response:
-The output should be formatted with the key format below. Do not add anything beyond the key format.
+The output should be formatted with the key format below. Do not add any comment before or after the key format. Just this format please.
 Start Key format:
 "summary" is the key and its content: Detailed summary of the current conversation in one line, do not make break lines.
 "user_intent" is the key and its content: Detailed current user goal at this point of the conversation.
@@ -84,9 +84,7 @@ class Memory:
         self, message: str
     ):
         # ToDo: Llamada a la base de datos para agregar el mensaje al chat
-        human_message = HumanMessage()
-        human_message.message = message
-        human_message.message_type = MEMORY_TYPES["HUMAN"]
+        human_message = HumanMessage(message, MEMORY_TYPES["HUMAN"])
         self.chat_memory.append(human_message)
         return human_message
 
@@ -94,13 +92,11 @@ class Memory:
         self,
         message: str,
         replied_user_message_id: str,
-        df: Optional[pd.DataFrame] = None,
+        df: list[dict[Hashable, Any]] = None,
+        sql_response: str | None = ""
     ):
         # ToDo: Llamada a la base de datos para agregar el mensaje al chat
-        ai_message = AIMessage(replied_user_message_id)
-        ai_message.message_type = MEMORY_TYPES["AI"]
-        ai_message.message = message
-        ai_message.dataframe = df
+        ai_message = AIMessage(replied_user_message_id, message, MEMORY_TYPES["AI"], df, sql_response)
         self.chat_memory.append(ai_message)
         return ai_message
 
@@ -118,9 +114,9 @@ class Memory:
             new_lines = f"""<User>{user_message.message}</User>"""
         else:
             if ai_message.dataframe is not None:
-                new_lines = f"""<User>{user_message.message}</User>\n<Assistant>\n{ai_message.message}\nHere is a dataframe: \n{ai_message.dataframe}</Assistant>"""
+                new_lines = f"""<Assistant>\n{ai_message.message}\nHere is a dataframe: \n{pd.DataFrame(ai_message.dataframe).head(10)}\n</Assistant>\n<User>{user_message.message}</User>"""
             else:
-                new_lines = f"""<User>{user_message.message}</User>\n<Assistant>{ai_message.message}</Assistant>"""
+                new_lines = f"""<Assistant>{ai_message.message}</Assistant>\n<User>{user_message.message}</User>"""
 
         if dictionary is not None:
             definitions = []
@@ -158,7 +154,7 @@ class Memory:
                     )
                 elif message.message_type == MEMORY_TYPES["AI"]:
                     if message.dataframe is not None:
-                        new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}\nHere is a dataframe from SQL: \n{message.dataframe.head(10).to_markdown()}"
+                        new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}\nHere is a dataframe from SQL: \n{pd.DataFrame(message.dataframe).head(10).to_markdown()}"
                     else:
                         new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}"
                 else:

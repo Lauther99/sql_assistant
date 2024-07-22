@@ -66,7 +66,7 @@ def get_simple_filter_prompt(user_request: str, examples: tuple):
 
 def get_greeting_response_prompt(last_user_message: HumanMessage, last_ai_message: AIMessage | None):
     last_ai_message = "" if last_ai_message is None else f"""<Assistant>{last_ai_message.message}</Assistant>"""
-    chat_lines = f"""<User>{last_user_message.message}</User>\n{last_ai_message}"""
+    chat_lines = f"""{last_ai_message}\n<User>{last_user_message.message}</User>"""
     
     prompt = greeting_template.format(conversation=chat_lines)
 

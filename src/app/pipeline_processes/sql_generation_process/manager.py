@@ -1,16 +1,16 @@
+from src.components.models.models_interfaces import Base_LLM
 from src.app.pipeline_processes.sql_generation_process.generation import generate_sql
 
 
 from src.app.pipeline_processes.sql_generation_process.retrievers import (
     retrieve_sql_examples,
 )
-from src.components.models.llms.llms import Langchain_OpenAI_LLM
 
 from src.components.collector.collector import AppDataCollector, LLMResponseCollector
 
 
 def complex_request_sql_generation(
-    llm: Langchain_OpenAI_LLM,
+    llm: Base_LLM,
     collector: AppDataCollector,
     llm_collector: LLMResponseCollector,
 ):
@@ -21,5 +21,5 @@ def complex_request_sql_generation(
 
     output = generate_sql(llm, llm_collector, user_request, semantic_info, sql_examples, collector.terms_dictionary)
 
-    collector.sql_code = output["sql_query"]
+    collector.sql_code = output["sql_query"].replace('"', "")
     return collector

@@ -3,6 +3,7 @@ from collections import defaultdict
 
 create_table_template = """CREATE TABLE IF NOT EXISTS dbo_v2.{table_name}(\n{list_columns_plus_type_plus_descriptions});"""
 
+# ! Deprecated ---------------------------------
 generate_sql_prefix_template: str = (
     """You are a SQL SERVER 2014 expert. Given an input request, create a syntactically correct SQL SERVER 2014 query to run. Remember NOT include backticks ```sql ``` before and after the created query. Unless otherwise specified."""
 )
@@ -28,6 +29,7 @@ END OF ANSWER FORMAT
 
 input_request: '''{user_request}'''
 Let's start thinking..."""
+# ! Deprecated ---------------------------------
 
 generate_sql_prefix_template: str = """I need your help to create a correct SQL SERVER 2014 query. Follow carefully the next steps:
 
@@ -58,7 +60,7 @@ Use this recommendations for a better evaluation:
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format.
 Start Key format:
-"sql_query" is the key and its content is: A correct SQL SERVER 2014 query in ONE LINE, Do not make line breaks in the query.
+"sql_query" is the key and its content is: A correct SQL SERVER 2014 query. The query must be in ONE LINE. DO NOT make line breaks.
 "suggestion" is the key and its content is: A Brief recommendation for the user about the missing attributes or how to improve the natural_language_question to have better results.
 "used_tables" is the key and its content is: Comma separated list of table names used in 'sql_query'].
 End of Key format
@@ -66,6 +68,42 @@ End of Key format
 Begin!"""
 
 generate_sql_suffix: str = """sql_query: """
+
+generate_sql_prefix_template: str = """I need your help to create a correct SQL SERVER 2014 query. Follow carefully the next steps:
+
+First, Take your time and read carefully the next input request:
+input_request: '''{user_request}'''
+
+Next, Take your time and look at this past sql examples. Use them only to have an idea for your answer, you are not allowed to use explicit information from this examples in your answer:
+{examples}
+ 
+Next, Look at this DDL from Database:
+{ddl}
+
+{information}
+
+Next, generation. Take your time and generate a syntactically correct SQL SERVER 2014 query according to the previous information.
+
+Next, evaluation. Evaluate if all the columns in your generated sql query are mentioned in the previous DDL list, if they are not, erase the column from your response. Make sure to use SQL SERVER 2014 statements for selecting or ordering.
+Use this recommendations for a better evaluation:
+- Be sure not to query for all columns, select more relevants ones. Avoid using SELECT * .
+- Be sure not to query for columns that do not exist in the tables and use alias only where required.
+- Likewise, when asked about the average (AVG function) or ratio, ensure the appropriate aggregation function is used.
+- Pay close attention to the filtering criteria mentioned in the question and incorporate them using the WHERE clause in your SQL query.
+- If the question involves multiple conditions, use logical operators such as AND, OR to combine them effectively.
+- If the question involves grouping of data (e.g., finding totals or averages for different categories), use the GROUP BY clause along with appropriate aggregate functions.
+- Consider using aliases for tables and columns to prevent ambiguities.
+"""
+
+generate_sql_suffix: str = """ANSWER FORMAT:
+Use the following key format to respond:
+sql_query: A correct SQL SERVER 2014 query. The query must be in ONE LINE. DO NOT make line breaks.
+suggestion: Brief recommendation for the user about the missing attributes or how to improve the natural_language_question to have better results.
+used_tables: [List of table names used in 'sql_query'].
+table_schema: Always use 'dbo_v2' schema.
+END OF ANSWER FORMAT
+
+Let's start thinking..."""
 
 
 def _add_examples_in_prompt(sql_examples: tuple):
@@ -96,7 +134,7 @@ def _add_documentation_in_prompt(
 
     if has_sql_instructions:
         texts = "\n".join(
-            f"Table info for: {table_name}\n    - " + "\n    - ".join(sqls)
+            f"Table advices for: {table_name}\n    - " + "\n    - ".join(sqls)
             for table_name, sqls in documentation_info.items()
         )
 

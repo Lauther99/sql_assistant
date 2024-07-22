@@ -7,7 +7,7 @@ from openai import OpenAI as OpenAI_From_OpenAILibrary
 import requests
 
 
-# Modelo de Openai llamado con Langchain
+# Modelo de Openai + Langchain
 class Langchain_OpenAI_LLM(Base_LLM):
     def __init__(self) -> None:
         super().__init__()
@@ -39,21 +39,25 @@ class Langchain_OpenAI_LLM(Base_LLM):
         return prompt
 
 
-# Modelo Openai llamado directamente
+# Modelo Openai
 class Openai_LLM(Base_LLM):
     def __init__(self) -> None:
         super().__init__()
 
     def init_model(self):
-        self.openai_endpoint = OpenAI_From_OpenAILibrary(
+        self.openai_client = OpenAI_From_OpenAILibrary(
             api_key=Settings.Openai.get_api_key()
         )
 
     def query_llm(self, input):
-        response = self.openai_endpoint.completions.create(
-            model=Settings.Openai.get_llm_model_name(), prompt=input, temperature=0
+        response = {}
+        r = self.openai_client.chat.completions.create(
+            model=Settings.Openai.get_llm_model_name(),
+            messages=[{"role": "user", "content": input}],
+            temperature=0,
         )
-        return response.choices[0].text
+        response["text"] = r.choices[0].message.content
+        return response
 
     def apply_model_template(self, instruction, suffix):
         prefix = "Your name is M-Assistant, very helpful assistant expert in measurement systems.\n"
@@ -61,11 +65,10 @@ class Openai_LLM(Base_LLM):
         return prompt
 
 
-# Modelo mixto Llama3(llm) + MultiLingualE5(embeddings)
+# Modelo Llama3-8B
 class HF_Llama38b_LLM(Base_LLM):
     def __init__(self) -> None:
         super().__init__()
-        self.instruction_suffix = ""
 
     def init_model(self):
         self.llm_endpoint = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
@@ -85,7 +88,7 @@ class HF_Llama38b_LLM(Base_LLM):
             "options": {
                 "use_cache": False,
                 "wait_for_model": True,
-            }
+            },
         }
 
         try:

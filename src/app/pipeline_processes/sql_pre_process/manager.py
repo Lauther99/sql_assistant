@@ -31,13 +31,17 @@ def complex_request_process_modification(
 ):
     # Parte 1: Resumiendo la conversacion
     # output = generate_chat_summary(llm, memory, llm_collector)
-    chat_summary = str(
-        collector.current_conversation_data.current_conversation_summary
-    ).strip()
+    # chat_summary = str(
+    #     collector.current_conversation_data.current_conversation_summary
+    # ).strip()
 
+    # Parte 2: Con los Slots y el request anterior generamos un request mas preciso
+    output = generate_enhanced_request(llm, llm_collector, collector)
+    user_request = output["response"]
+    
     # Parte 2: Encontrando y generando terminos tecnicos de la conversacion
-    terms_examples = retrieve_terms_examples(chat_summary, embeddings)
-    output = generate_technical_terms(llm, llm_collector, chat_summary, terms_examples)
+    terms_examples = retrieve_terms_examples(user_request, embeddings)
+    output = generate_technical_terms(llm, llm_collector, user_request, terms_examples)
     technical_terms = output["terms"]
 
     # Parte 3: Recuperando definiciones para los terminos desde la bd vectorial (retrieval) para crear el diccionario
@@ -45,35 +49,36 @@ def complex_request_process_modification(
         retrieve_semantic_term_definitions(embeddings, technical_terms)
     )
 
-    # Parte 4: Con los Slots y el request anterior generamos un request mas preciso
-    output = generate_enhanced_request(llm, llm_collector, collector)
-    user_request = output["response"]
-
-    complemented_user_request = None
+    modified_user_request = None
 
     if has_replacement_definitions:
         # Parte 5: Identificando posible multidefinicion y claridad del requerimiento
-        output = generate_multi_definition_detector(
-            llm, llm_collector, user_request, terms_dictionary
-        )
+        # output = generate_multi_definition_detector(
+        #     llm, llm_collector, user_request, terms_dictionary
+        # )
 
         # Parte 6: Verificando si el request no es ambiguo despues de ver las definiciones y multi definiciones
-        complemented_user_request = generate_multi_definition_question(
-            llm, llm_collector, user_request, output["class"], output["analysis"]
-        )
+        # modified_user_request = generate_multi_definition_question(
+        #     llm, llm_collector, user_request, output["class"], output["analysis"]
+        # )
 
         # Parte 7: Reemplazando los terminos especiales por estandares
+        # output = generate_flavored_request(
+        #     llm, llm_collector, modified_user_request, terms_dictionary
+        # )
         output = generate_flavored_request(
-            llm, llm_collector, complemented_user_request, terms_dictionary
+            llm, llm_collector, user_request, terms_dictionary
         )
         flavored_request_for_semantic_search = output["modified_sentence"]
+        modified_user_request = user_request
+        
     else:
         flavored_request_for_semantic_search = user_request
-        complemented_user_request = user_request
+        modified_user_request = user_request
 
     collector.terms_dictionary = terms_dictionary
     collector.technical_terms = technical_terms
-    collector.modified_user_request = complemented_user_request
+    collector.modified_user_request = modified_user_request
     collector.flavored_request_for_semantic_search = (
         flavored_request_for_semantic_search
     )

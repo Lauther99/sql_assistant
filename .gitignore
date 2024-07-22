@@ -11,6 +11,7 @@ src/components/collector/__pycache__/
 src/db/handlers/__pycache__/
 src/components/models/embeddings/__pycache__
 src/components/models/llms/__pycache__
+src/app/pipeline_processes/__pycache__
 src/app/pipeline_processes/query_post_process/__pycache__
 src/app/pipeline_processes/query_pre_process/__pycache__
 src/app/pipeline_processes/sql_pre_process/__pycache__

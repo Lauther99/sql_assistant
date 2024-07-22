@@ -1,3 +1,4 @@
+from typing import Any, Hashable
 from src.app.pipeline_processes.sql_post_process.generation import (
     generate_sql_classification,
     generate_sql_pre_query,
@@ -45,7 +46,7 @@ def complex_request_sql_summary_response(
     llm: Base_LLM,
     collector: AppDataCollector,
     llm_collector: LLMResponseCollector,
-    dataframe: pd.DataFrame,
+    dataframe: list[dict[Hashable, Any]],
 ):
     user_request = collector.modified_user_request
     pre_query = collector.sql_pre_query

@@ -108,16 +108,6 @@ def generate_flavored_request(
 
     return output
 
-# def generate_chat_summary(
-#     model: Base_LLM,
-#     memory: Memory,
-#     llm_collector: LLMResponseCollector,
-#     collector: AppDataCollector,
-# ):
-#     instruction, suffix = memory.get_summary_prompt_template()
-#     prompt = model.apply_model_template(instruction, suffix)
-#     output = base_llm_generation(model, llm_collector, prompt, "summary-conversation")
-#     return output
 
 def generate_enhanced_request(
     model: Base_LLM,

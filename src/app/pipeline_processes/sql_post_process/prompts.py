@@ -1,3 +1,4 @@
+from typing import Any, Hashable
 import pandas as pd
 
 create_table_template: str = (
@@ -68,11 +69,12 @@ Begin!"""
 generate_summary_no_intents_template: str = """I need your help. Follow carefully the next steps:
 
 First, look up the next user request:
-user_request: '''{user_request}'''
+<User request>{user_request}</User request>
 
 Second, the next is a pandas dataframe that answers the previous request. Pay attention to this information:
-
+<Dataframe>
 {dataframe}
+</Dataframe>
 
 Third, generation. Generate a brief response to the user request based on the previous dataframe.
 
@@ -83,17 +85,18 @@ Note:
  - Do not add your own conclusions or clarifications.
  - If dataframe is empty, say that the response is not available."""
 
-generate_summary_no_intents_suffix = """Note: You can make brief suggestion for user query to mention dates or names to retrieve better information from database.
-
+generate_summary_no_intents_suffix = """
 Use the following key format to respond:
 response: Your briefly response in one line, do not make line breaks.
 
 Begin!"""
 
 generate_summary_with_intents_template: str = """The following is a user request:
-user_request: '''{user_request}'''
+<User request>{user_request}</User request>
 But for before continue is necessary that user choose one option of the results in the pandas DataFrame:
+<Dataframe>
 {dataframe}
+</Dataframe>
 
 Your task is to cordially ask the user to choose something from the dataframe before continuing his request.
 Do not include the specific options from dataframe in your response.
@@ -148,19 +151,19 @@ def get_sql_pre_query_prompt(incomplete_sql_query: str, analysis: str, suggestio
 
 
 def get_sql_summary_response_prompt(
-    sql_dataframe: pd.DataFrame, user_request: str, is_pre_query: bool
+    sql_dataframe: list[dict[Hashable, Any]], user_request: str, is_pre_query: bool
 ):
     if not is_pre_query:
         prompt = generate_summary_no_intents_template
         prompt = prompt.format(
-            dataframe=sql_dataframe.head(10).to_markdown(),
+            dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
             user_request=user_request,
         )
         suffix = generate_summary_no_intents_suffix
     else:
         prompt = generate_summary_with_intents_template
         prompt = prompt.format(
-            dataframe=sql_dataframe.head(10).to_markdown(),
+            dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
             user_request=user_request,
         )
         suffix = generate_summary_with_intents_suffix

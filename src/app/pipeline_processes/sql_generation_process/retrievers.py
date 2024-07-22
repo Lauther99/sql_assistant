@@ -6,6 +6,6 @@ def retrieve_sql_examples(
     user_request: str,
 ):
     collection = Settings.Chroma.get_sql_examples_collection()
-    results = query_by_texts(collection, [user_request], 4, score_threshold=0.3)
+    results = query_by_texts(collection, [user_request], 4, score_threshold=0.5)
     return results
 

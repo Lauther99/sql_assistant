@@ -57,7 +57,6 @@ def clean_technical_term(sentence: str) -> str:
 
 
 def clean_symbols(sentence: str) -> str:
-    """Limpia los terminos numeros"""
     no_symbols = re.sub("[^a-zA-Z0-9' ]", "", sentence).lower().strip()
     return no_symbols
 

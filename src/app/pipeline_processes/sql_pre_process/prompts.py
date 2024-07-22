@@ -155,7 +155,6 @@ replace_terms_suffix = "modified_sentence:"
 enhanced_request_instruction: str = """I need your help with a very important task for my work. Follow carefully this instructions step by step.
 
 First, read this current user intent:
-The next is a conversation between Assistant and Human.
 <user_intent>{user_intent}</user_intent> 
 
 Second, the next are relevant slots from a conversation that are necessary to complete the previous user intent:
@@ -288,12 +287,13 @@ def get_modified_request_prompt(user_request, terms_dictionary):
     for _, item in enumerate(terms_dictionary):
         if len(item["definitions"]) > 0:
             technical_terms_arr.append(item["original_term"])
-            replace_instructions += f"""For term '{item["original_term"]}'\n"""
+            replace_instructions += f"""For terms related to: '{item["original_term"]}'\n"""
             for _, inner_definition in enumerate(item["definitions"]):
-                replace_instructions += (
-                    f"""- {inner_definition["replace_instruction"]}\n"""
-                )
-            replace_instructions += "\n"
+                if str(inner_definition["definition"]).strip():
+                    replace_instructions += (
+                        f"""- Definition: {inner_definition["definition"]}\n- Replace_instruction: {inner_definition["replace_instruction"]}\n"""
+                    )
+                    replace_instructions += "\n"
 
     technical_terms = ", ".join(technical_terms_arr)
 
