@@ -109,6 +109,37 @@ response: Your briefly question in one line, do not make line breaks.
 
 Begin!"""
 
+improved_summary_instruction: str = """According to this user request:
+<Request>
+{user_request}
+</Request>
+
+This is an sql code:
+<Sql>
+{sql_code}
+</Sql>
+
+And this answer from database:
+<dataframe>
+{dataframe}
+</dataframe>
+
+As an expert in SQL, your task is to understand the previous given information and explain briefly the response obtained for the user.
+
+Note: 
+User is not an expert, so he does not need a lot of technical sql details.
+But you can explain understandable filters like dates or status.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+"response" is the key and its content is: Brief analysis for normal user.
+End of Key format
+
+Begin!"""
+
+improved_summary_suffix = """response:"""
+
 
 def get_sql_classifier_prompt(sql_query: str, semantic_info: dict[str, any]):
     ddls = list()
@@ -151,21 +182,29 @@ def get_sql_pre_query_prompt(incomplete_sql_query: str, analysis: str, suggestio
 
 
 def get_sql_summary_response_prompt(
-    sql_dataframe: list[dict[Hashable, Any]], user_request: str, is_pre_query: bool
+    sql_dataframe: list[dict[Hashable, Any]], user_request: str, sql_code: str
 ):
-    if not is_pre_query:
-        prompt = generate_summary_no_intents_template
-        prompt = prompt.format(
-            dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
-            user_request=user_request,
-        )
-        suffix = generate_summary_no_intents_suffix
-    else:
-        prompt = generate_summary_with_intents_template
-        prompt = prompt.format(
-            dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
-            user_request=user_request,
-        )
-        suffix = generate_summary_with_intents_suffix
-
+    prompt = improved_summary_instruction.format(
+        dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
+        user_request=user_request,
+        sql_code=sql_code,
+    )
+    suffix = improved_summary_suffix
     return prompt, suffix
+
+    # if not is_pre_query:
+    #     prompt = generate_summary_no_intents_template
+    #     prompt = prompt.format(
+    #         dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
+    #         user_request=user_request,
+    #     )
+    #     suffix = generate_summary_no_intents_suffix
+    # else:
+    #     prompt = generate_summary_with_intents_template
+    #     prompt = prompt.format(
+    #         dataframe=pd.DataFrame(sql_dataframe).head(10).to_markdown(),
+    #         user_request=user_request,
+    #     )
+    #     suffix = generate_summary_with_intents_suffix
+
+    # return prompt, suffix

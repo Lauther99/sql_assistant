@@ -47,7 +47,7 @@ def main_pipeline(
             llm_collector=llm_collector,
             memory=memory,
         )
-        _post_sql_generation_pipeline(openai_llm, collector, llm_collector)
+        _post_sql_generation_pipeline(llama3_llm, collector, llm_collector)
 
     _post_process_pipeline(openai_llm, collector=collector, llm_collector=llm_collector)
 

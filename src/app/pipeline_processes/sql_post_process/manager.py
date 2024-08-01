@@ -49,10 +49,18 @@ def complex_request_sql_summary_response(
     dataframe: list[dict[Hashable, Any]],
 ):
     user_request = collector.modified_user_request
-    pre_query = collector.sql_pre_query
-    is_prequery = pre_query is not None and pre_query != ""
+    sql_code = collector.sql_code
 
-    output = generate_sql_summary_response(llm, llm_collector, dataframe, user_request, is_prequery)
+    # pre_query = collector.sql_pre_query
+    # is_prequery = pre_query is not None and pre_query != ""
+
+    output = generate_sql_summary_response(
+        model=llm,
+        llm_collector=llm_collector,
+        sql_dataframe=dataframe,
+        user_request=user_request,
+        sql_code=sql_code,
+    )
 
     collector.ai_pre_response = output["response"]
     collector.dataframe_response = dataframe

@@ -40,11 +40,14 @@ def complex_request_process_modification(
     technical_terms = output["terms"]
 
     # Parte 3: Recuperando definiciones para los terminos (retrieval) para crear el diccionario
-    terms_dictionary, has_replacement_definitions, _ = (
+    terms_dictionary, _, _ = (
         retrieve_semantic_term_definitions(embeddings, technical_terms)
     )
 
-    if has_replacement_definitions:
+    output = generate_flavored_request(llm, llm_collector, terms_dictionary)
+    semantic_list_terms = output["response"] if output["response"] else technical_terms
+    
+    # if has_replacement_definitions:
         # Parte 5: Identificando posible multidefinicion y claridad del requerimiento
         # output = generate_multi_definition_detector(
         #     llm, llm_collector, user_request, terms_dictionary
@@ -59,10 +62,10 @@ def complex_request_process_modification(
         # output = generate_flavored_request(
         #     llm, llm_collector, modified_user_request, terms_dictionary
         # )
-        output = generate_flavored_request(llm, llm_collector, terms_dictionary)
-        semantic_list_terms = output["response"]
-    else:
-        semantic_list_terms = technical_terms
+    #     output = generate_flavored_request(llm, llm_collector, terms_dictionary)
+    #     semantic_list_terms = output["response"]
+    # else:
+    #     semantic_list_terms = technical_terms
 
     collector.terms_dictionary = terms_dictionary
     collector.technical_terms = technical_terms

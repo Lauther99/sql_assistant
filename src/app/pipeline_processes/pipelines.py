@@ -119,52 +119,69 @@ def _complex_request_pipeline(
 
 
 def _post_sql_generation_pipeline(
-    openai_llm: Base_LLM,
+    llama3_llm: Base_LLM,
     collector: AppDataCollector,
     llm_collector: LLMResponseCollector,
 ):
-    df = None
-    is_prequery = (
-        collector.assistant_sql_code_class.strip() == "incomplete"
-        if collector.assistant_sql_code_class
-        else False
-    )
+    df = [{'Response': "Empty"}]
+    try:
+        print("Ejecutando codigo SQL ...")
+        df = run_sql(collector.sql_code)
+    except Exception as e:
+        print(f"Error al ejecutar collector.sql_code \n{e}")
+        traceback.print_exc()
 
-    if is_prequery:
-        try:
-            print("Ejecutando codigo SQL de prequery ...")
-            df = run_sql(collector.sql_pre_query)
-        except Exception as e:
-            print(f"Error al ejecutar collector.sql_pre_query \n{e}")
-            traceback.print_exc()
-        try:
-            complex_request_sql_summary_response(
-                llm=openai_llm,
-                collector=collector,
-                llm_collector=llm_collector,
-                dataframe=df,
-            )
-        except Exception as e:
-            print(f"Error al ejecutar complex_request_sql_summary_response\n{e}")
-            traceback.print_exc()
-    else:
-        try:
-            print("Ejecutando codigo SQL ...")
-            df = run_sql(collector.sql_code)
-        except Exception as e:
-            print(f"Error al ejecutar collector.sql_code \n{e}")
-            traceback.print_exc()
+    try:
+        complex_request_sql_summary_response(
+            llm=llama3_llm,
+            collector=collector,
+            llm_collector=llm_collector,
+            dataframe=df,
+        )
+    except Exception as e:
+        print(f"Error al ejecutar complex_request_sql_summary_response\n{e}")
+        traceback.print_exc()
+    # is_prequery = (
+    #     collector.assistant_sql_code_class.strip() == "incomplete"
+    #     if collector.assistant_sql_code_class
+    #     else False
+    # )
 
-        try:
-            complex_request_sql_summary_response(
-                llm=openai_llm,
-                collector=collector,
-                llm_collector=llm_collector,
-                dataframe=df,
-            )
-        except Exception as e:
-            print(f"Error al ejecutar complex_request_sql_summary_response\n{e}")
-            traceback.print_exc()
+    # if is_prequery:
+    #     try:
+    #         print("Ejecutando codigo SQL de prequery ...")
+    #         df = run_sql(collector.sql_pre_query)
+    #     except Exception as e:
+    #         print(f"Error al ejecutar collector.sql_pre_query \n{e}")
+    #         traceback.print_exc()
+    #     try:
+    #         complex_request_sql_summary_response(
+    #             llm=llama3_llm,
+    #             collector=collector,
+    #             llm_collector=llm_collector,
+    #             dataframe=df,
+    #         )
+    #     except Exception as e:
+    #         print(f"Error al ejecutar complex_request_sql_summary_response\n{e}")
+    #         traceback.print_exc()
+    # else:
+    #     try:
+    #         print("Ejecutando codigo SQL ...")
+    #         df = run_sql(collector.sql_code)
+    #     except Exception as e:
+    #         print(f"Error al ejecutar collector.sql_code \n{e}")
+    #         traceback.print_exc()
+
+    #     try:
+    #         complex_request_sql_summary_response(
+    #             llm=llama3_llm,
+    #             collector=collector,
+    #             llm_collector=llm_collector,
+    #             dataframe=df,
+    #         )
+    #     except Exception as e:
+    #         print(f"Error al ejecutar complex_request_sql_summary_response\n{e}")
+    #         traceback.print_exc()
 
 
 def _post_process_pipeline(

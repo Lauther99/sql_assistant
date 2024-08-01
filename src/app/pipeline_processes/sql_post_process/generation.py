@@ -42,10 +42,10 @@ def generate_sql_summary_response(
     llm_collector: LLMResponseCollector,
     sql_dataframe: list[dict[Hashable, Any]],
     user_request: str,
-    is_pre_query: bool,
+    sql_code: str,
 ):
     instruction, suffix = get_sql_summary_response_prompt(
-        sql_dataframe, user_request, is_pre_query
+        sql_dataframe=sql_dataframe, user_request=user_request, sql_code=sql_code
     )
     prompt = model.apply_model_template(instruction, suffix)
     res = base_llm_generation(model, llm_collector, prompt, "summary-response-sql")
