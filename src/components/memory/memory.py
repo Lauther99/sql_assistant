@@ -1,6 +1,7 @@
 import sys
 
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
+from src.db.mongo.interfaces import ChatDocument
 from src.components.memory.memory_interfaces import AIMessage, HumanMessage
 from src.components.memory import MEMORY_TYPES
 from typing import Any, Hashable, List, Optional, Union
@@ -76,8 +77,8 @@ summary_instruction_suffix = """summary: """
 
 class Memory:
     
-    def __init__(self, chat: List[Union[AIMessage, HumanMessage]] = []) -> None:
-        self.chat_memory = chat
+    def __init__(self, chat_document: ChatDocument) -> None:
+        self.chat_memory = chat_document.messages
     
     # Chat management
     def add_user_message(

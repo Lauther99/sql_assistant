@@ -3,7 +3,8 @@ src/settings/.env
 src/settings/__pycache__
 src/utils/__pycache__
 src/document_indexing/__pycache__
-src/db/chroma_db
+src/db/chroma_db/db
+src/db/chroma_db/handlers/__pycache__
 src/components/memory/__pycache__
 src/document_indexing/data_functions/__pycache__
 src/components/models/__pycache__/
@@ -19,7 +20,7 @@ src/app/pipeline_processes/sql_generation_process/__pycache__
 src/app/pipeline_processes/sql_post_process/__pycache__
 src/app/rag/__pycache__
 src/app/__pycache__
-
+src/db/mongo/__pycache__
 
 experiments/db
 experiments/experiments_settings/.env

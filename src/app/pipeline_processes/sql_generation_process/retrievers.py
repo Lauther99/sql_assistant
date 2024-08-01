@@ -1,4 +1,4 @@
-from src.db.handlers.handlers import query_by_texts
+from src.db.chroma_db.handlers.handlers import query_by_texts
 from src.settings.settings import Settings
 
 

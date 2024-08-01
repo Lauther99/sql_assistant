@@ -51,6 +51,7 @@ class AppDataCollector(ABC):
 
         self.ai_post_response: Optional[str] = None
         self.detected_language: Optional[str] = None
+        self.semantic_list_terms: Optional[list[str]] = None
 
     def __repr__(self):
         return (

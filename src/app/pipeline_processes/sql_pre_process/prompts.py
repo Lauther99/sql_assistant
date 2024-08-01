@@ -152,7 +152,29 @@ Begin!"""
 
 replace_terms_suffix = "modified_sentence:"
 
-enhanced_request_instruction: str = """I need your help with a very important task for my work. Follow carefully this instructions step by step.
+modified_keywords_list_instruction = """You will be given a list of technical terms and some definitions for a better understanding of this terms.
+<Technical_terms>{technical_terms}</Technical_terms>
+
+<Definitions>
+{definitions}
+</Definitions>
+
+Your task is to give a new list of technical terms but this time with the suggested term according to the definitions.
+
+Note: Do not add terms that are in the first list in your response.
+
+Output format response:
+The output should be formatted with the key format below. Do not add anything beyond the key format.
+Start Key format:
+key: "response"
+content: Comma separated list of suggested terms according to definitions.
+End of Key format
+
+Begin!"""
+
+modified_keywords_list_suffix = "response:"
+
+enhanced_request_instruction: str = """I need your help with a very important task for my job. Follow carefully this instructions step by step.
 
 First, read this current user intent:
 <user_intent>{user_intent}</user_intent> 
@@ -304,3 +326,26 @@ def get_modified_request_prompt(user_request, terms_dictionary):
     )
 
     return instruction, replace_terms_suffix
+
+def get_modified_keywords_prompt(terms_dictionary):
+    replace_instructions = ""
+    technical_terms_arr = list()
+    for _, item in enumerate(terms_dictionary):
+        if len(item["definitions"]) > 0:
+            technical_terms_arr.append(item["original_term"])
+            replace_instructions += f"""For terms related to: '{item["original_term"]}'\n"""
+            for _, inner_definition in enumerate(item["definitions"]):
+                if str(inner_definition["definition"]).strip():
+                    replace_instructions += (
+                        f"""- Definition: {inner_definition["definition"]}\n- Replace_instruction: {inner_definition["replace_instruction"]}\n"""
+                    )
+                    replace_instructions += "\n"
+
+    technical_terms = ", ".join(technical_terms_arr)
+
+    instruction = modified_keywords_list_instruction.format(
+        technical_terms=technical_terms,
+        definitions=replace_instructions,
+    )
+
+    return instruction, modified_keywords_list_suffix

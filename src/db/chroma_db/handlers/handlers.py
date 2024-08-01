@@ -1,11 +1,12 @@
 import sys
+
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
 from chromadb.api.models.Collection import Collection
-from typing import Optional
+from typing import Optional, Dict, Set, Tuple, List
 from src.utils.utils import clean_sentence
 from src.utils.reader_utils import read_database_semantics
 import inspect
-
+import copy
 
 def query_by_texts(
     collection: Collection,
@@ -31,7 +32,7 @@ def query_by_texts(
             n_results=n,
             include=["distances", "metadatas"],
         )
-    
+
     data = set()
 
     for distances, metadatas in zip(results["distances"], results["metadatas"]):
@@ -48,7 +49,7 @@ def query_by_vector_embedding(
     vector_embedding: list[float],
     n: Optional[int] = 5,
     score_threshold: Optional[float] = 0.8,
-    metadata_filters: Optional[dict[str, any]] = None,
+    metadata_filters: Optional[dict[str, any]] = None
 ):
     """Querying a Chroma db by vector embedding"""
     args, _, _, values = inspect.getargvalues(inspect.currentframe())
@@ -66,7 +67,6 @@ def query_by_vector_embedding(
             n_results=n,
             include=["distances", "metadatas"],
         )
-
     data = set()
     for distances, metadatas in zip(results["distances"], results["metadatas"]):
         for distance, metadata in zip(distances, metadatas):
@@ -78,14 +78,14 @@ def query_by_vector_embedding(
     data_list = list(data)
     data_list.sort(key=lambda x: dict(x)["distance"], reverse=True)
     return tuple(data_list)
-
+    
 
 def process_searched_relations(
-    items: tuple,
-    tables_related: dict[str, any] = {},
-    current_relations_descriptions: list[str] = [],
+    items: Tuple[tuple],
+    tables_related: Dict[str, Set[Tuple]] = {},
+    current_relations_descriptions: List[str] = [],
     index: int = 0,
-) -> dict[str, any]:
+) -> dict:
     table_1_name = None
     table_2_name = None
     table_1_key = None
@@ -116,27 +116,24 @@ def process_searched_relations(
         elif item[0] == "table_2":
             table_2_name = item[1]
         elif item[0] == "relation_description":
-            relation_description = str(item[1]).strip()
+            relation_description = item[1].strip()
         elif item[0] == "key_table_1_description":
-            key_table_1_description = str(item[1]).strip()
+            key_table_1_description = item[1].strip()
         elif item[0] == "key_table_2_description":
-            key_table_2_description = str(item[1]).strip()
+            key_table_2_description = item[1].strip()
         elif item[0] == "key_mid_table_1_description":
-            key_mid_table_1_description = str(item[1]).strip()
+            key_mid_table_1_description = item[1].strip()
         elif item[0] == "key_mid_table_2_description":
-            key_mid_table_2_description = str(item[1]).strip()
+            key_mid_table_2_description = item[1].strip()
 
     current_relations_descriptions.append(relation_description)
-
+    
     tables_related.setdefault(table_1_name, set())
     tables_related.setdefault(table_2_name, set())
     if (
-        mid_table_key_1 is None
-        or mid_table_key_1 == ""
-        and mid_table_key_2 is None
-        or mid_table_key_2 == ""
-        and mid_table_name is None
-        or mid_table_name == ""
+        (mid_table_key_1 is None or mid_table_key_1 == "")
+        and (mid_table_key_2 is None or mid_table_key_2 == "")
+        and (mid_table_name is None or mid_table_name == "")
     ):
         tables_related[table_1_name].add(
             (
@@ -169,7 +166,7 @@ def process_searched_relations(
                 "INT",
                 key_mid_table_1_description,
                 999 if mid_table_key_1 != "Id" else 1,
-                (table_1_name, mid_table_name)
+                (table_1_name, mid_table_name),
             )
         )
         tables_related[mid_table_name].add(
@@ -178,23 +175,23 @@ def process_searched_relations(
                 "INT",
                 key_mid_table_2_description,
                 999 if mid_table_key_2 != "Id" else 1,
-                (table_2_name, mid_table_name)
+                (table_2_name, mid_table_name),
             )
         )
-    current_relations_descriptions = set(current_relations_descriptions)
+
     if index < len(items) - 1:
         return process_searched_relations(
-            items, tables_related, list(current_relations_descriptions), index + 1
+            items, tables_related, current_relations_descriptions, index + 1
         )
     else:
         return {
             "tables_related": tables_related,
-            "table_relations_descriptions": list(current_relations_descriptions),
+            "table_relations_descriptions": list(set(current_relations_descriptions)),
         }
 
 
 def add_base_columns(
-    tables: list[str], current_columns: dict[str, any]
+    tables: list[str], current_columns: dict[str, any] = {}
 ) -> dict[str, any]:
     base_columns = read_database_semantics("basic_columns")
     filtered_columns = base_columns[base_columns["meta_table"].isin(tables)]
@@ -207,7 +204,7 @@ def add_base_columns(
                 item["meta_column_type"],
                 str(item["meta_column_comment"]).strip(),
                 item["meta_priority"],
-                (item["meta_table"])
+                (item["meta_table"]),
             )
         )
 
@@ -238,10 +235,16 @@ def process_searched_columns(
             column_priority = item[1]
 
     current_columns.setdefault(table_name, set())
-    current_columns[table_name].add(
-        (column_name, column_type, column_description, column_priority, table_name)
-    )
+    current_columns[table_name].add((column_name, column_type, column_description, column_priority, table_name))
     if index < len(columns) - 1:
         return process_searched_columns(columns, current_columns, index + 1)
     else:
         return current_columns
+
+def melt_columns(join_columns: list[dict[str, any]], normal_columns: dict):
+    normal_columns_copy = copy.deepcopy(normal_columns)
+    for item in join_columns:
+        for k, v in item.items(): # 'k' es el nombre de la tabla y 'v' es la data
+            if len(v):
+                normal_columns_copy[k].update(v)
+    return normal_columns_copy

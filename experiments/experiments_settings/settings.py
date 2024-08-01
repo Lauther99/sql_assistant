@@ -85,6 +85,103 @@ class ChromaExperimentsDBSetup:
         )
         return collection
 
+    @staticmethod
+    def get_experiments_semantic_tables_collection() -> Collection:
+        """"""
+
+        # api_key = Config.get_hf_config()["HF_KEY"]
+        # embeddings_model_name = Config.get_hf_config()[
+        #     "HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"
+        # ]
+        api_key = Config.get_openai_config()["OPENAI_API_KEY"]
+        embeddings_model_name = Config.get_openai_config()["OPENAI_EMBEDDINGS_MODEL"]
+
+
+        collection_name = Config.get_experimentsdb_config()[
+            "EXPERIMENTS_SEMANTIC_TABLES"
+        ]
+
+        chromadb_directory = Config.get_experimentsdb_config()[
+            "CHROMADB_EXPERIMENTS_DIRECTORY"
+        ]
+        path = os.path.abspath(chromadb_directory)
+
+        embedding_function = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=api_key,
+            model_name=embeddings_model_name,
+        )
+        chroma_client = chromadb.PersistentClient(path=path)
+        collection = chroma_client.get_collection(
+            name=collection_name, embedding_function=embedding_function
+        )
+        return collection
+
+    @staticmethod
+    def get_experiments_semantic_relations_collection() -> Collection:
+        """"""
+
+        # api_key = Config.get_hf_config()["HF_KEY"]
+        # embeddings_model_name = Config.get_hf_config()[
+        #     "HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"
+        # ]
+        api_key = Config.get_openai_config()["OPENAI_API_KEY"]
+        embeddings_model_name = Config.get_openai_config()["OPENAI_EMBEDDINGS_MODEL"]
+
+
+        collection_name = Config.get_experimentsdb_config()[
+            "EXPERIMENTS_SEMANTIC_RELATIONS"
+        ]
+
+        chromadb_directory = Config.get_experimentsdb_config()[
+            "CHROMADB_EXPERIMENTS_DIRECTORY"
+        ]
+        path = os.path.abspath(chromadb_directory)
+
+        embedding_function = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=api_key,
+            model_name=embeddings_model_name,
+        )
+        chroma_client = chromadb.PersistentClient(path=path)
+        collection = chroma_client.get_collection(
+            name=collection_name, embedding_function=embedding_function
+        )
+        return collection
+
+    @staticmethod
+    def get_experiments_semantic_columns() -> Collection:
+        """"""
+        api_key = Config.get_openai_config()["OPENAI_API_KEY"]
+        embeddings_model_name = Config.get_openai_config()["OPENAI_EMBEDDINGS_MODEL"]
+
+        # api_key = Config.get_hf_config()["HF_KEY"]
+        # embeddings_model_name = Config.get_hf_config()[
+        #     "HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"
+        # ]
+
+        collection_name = Config.get_experimentsdb_config()[
+            "EXPERIMENTS_COLUMNS"
+        ]
+
+        chromadb_directory = Config.get_experimentsdb_config()[
+            "CHROMADB_EXPERIMENTS_DIRECTORY"
+        ]
+        path = os.path.abspath(chromadb_directory)
+
+        # embedding_function = embedding_functions.HuggingFaceEmbeddingFunction(
+        #     api_key=api_key,
+        #     model_name=embeddings_model_name,
+        # )
+        embedding_function = embedding_functions.OpenAIEmbeddingFunction(
+            api_key=api_key,
+            model_name=embeddings_model_name,
+        )
+        
+        chroma_client = chromadb.PersistentClient(path=path)
+        collection = chroma_client.get_collection(
+            name=collection_name, embedding_function=embedding_function
+        )
+        return collection
+
 
 class SQLSettings:
     @staticmethod

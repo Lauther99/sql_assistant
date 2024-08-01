@@ -244,7 +244,7 @@ class DataIndexerAssistant:
 
     def train_table_definitions_collection(self):
         # Leyendo el diccionario del excel
-        excel_data = read_database_semantics(sheet_name="semantics_tables")
+        excel_data = read_database_semantics(sheet_name="semantic_tables_kw")
         vectors = []
         metadatas = []
         ids = []
@@ -279,7 +279,7 @@ class DataIndexerAssistant:
     def train_relations_definitions_collection(self):
         # Leyendo el diccionario del excel
         excel_df = read_database_semantics(
-            sheet_name="semantics_relations",
+            sheet_name="semantics_relations_kw",
             cols=[
                 "semantic_table_relation",
                 "meta_table_1",

@@ -1,6 +1,7 @@
 from src.components.models.models_interfaces import Base_Embeddings
-from src.db.handlers.handlers import (
+from src.db.chroma_db.handlers.handlers import (
     add_base_columns,
+    melt_columns,
     process_searched_columns,
     process_searched_relations,
     query_by_vector_embedding,
@@ -205,3 +206,77 @@ def retrieve_semantic_term_definitions(
             )
 
     return terms_arr, has_replacement_definitions, has_sql_instructions
+
+
+def retrieve_sql_semantic_information_improved(
+    keywords_arr: list[str],
+    embeddings: Base_Embeddings,
+    relations_search_properties: dict[str, any] = {"n": 5, "score_threshold": 0.65},
+    columns_search_properties: dict[str, any] = {"n": 4, "score_threshold": 0.6},
+):
+    """ """
+    vectors = []
+    relations_collection = Settings.Chroma.get_relations_definitions_collection()
+    columns_collection = Settings.Chroma.get_columns_definitions_collection()
+    
+    tables = set()
+    results_columns_collection = tuple()
+    combined_dict = {}
+    tables_related = [] # Arreglo de tablas con columnas necesarias para JOINS 
+    table_relations_descriptions = set()
+    
+    # Parte 0: Vectorizando las palabras
+    for kw_item in keywords_arr:
+        v = embeddings.get_embeddings(clean_sentence(kw_item))
+        vectors.append(v)
+    
+    # Parte 1: Buscamos las tablas
+    for _, kw_vector in enumerate(vectors):
+        # Buscamos en la db
+        results_relations_collection = query_by_vector_embedding(
+            collection=relations_collection,
+            vector_embedding=kw_vector,
+            n=relations_search_properties["n"],
+            score_threshold=relations_search_properties["score_threshold"],
+            metadata_filters={},
+        )
+        if not results_relations_collection:
+            continue
+
+        # Formateamos la data recuperada
+        if len(results_relations_collection) > 0:
+            x = process_searched_relations(items=results_relations_collection, tables_related={})
+            tables_related.append(x["tables_related"]) 
+            table_relations_descriptions.update(x["table_relations_descriptions"]) 
+            
+            tables = set(x["tables_related"].keys()).union(tables)
+            
+    # Parte 2: Busqueda semantica de columnas (porsiacaso una extra jeje)
+    for _, kw_vector in enumerate(vectors):
+        for table in tables:
+            results_columns_collection += query_by_vector_embedding(
+                collection=columns_collection,
+                vector_embedding=kw_vector,
+                n=columns_search_properties["n"],
+                score_threshold=columns_search_properties["score_threshold"],
+                metadata_filters={"meta_table": {"$eq": table}},
+            )        
+            if len(results_columns_collection) > 0:
+                current_data = process_searched_columns(results_columns_collection, {}, 0)
+                combined_dict.update(add_base_columns(tables, current_data))
+            else:
+                combined_dict.update(add_base_columns(tables, {}))
+        
+    # Parte 3: Merge de las columnas normales y las columnas para JOINS
+    resultado_columnas = melt_columns(tables_related, combined_dict)
+    
+    return (
+        tables,
+        resultado_columnas,
+        (
+           table_relations_descriptions
+            if table_relations_descriptions
+            else []
+        ),
+    )
+  

@@ -3,6 +3,7 @@ from src.app.rag.rag_utils import base_llm_generation
 from src.components.models.models_interfaces import Base_LLM, Base_Embeddings
 from src.app.pipeline_processes.sql_pre_process.prompts import (
     get_generate_semantic_tables_prompt,
+    get_modified_keywords_prompt,
     get_multi_definition_question_prompt,
     get_complement_request_prompt,
     get_enhanced_request_prompt,
@@ -99,13 +100,12 @@ def generate_multi_definition_detector(
 def generate_flavored_request(
     model: Base_LLM,
     llm_collector: LLMResponseCollector,
-    user_request: str,
     terms_dictionary,
 ):
-    instruction, suffix = get_modified_request_prompt(user_request, terms_dictionary)
+    instruction, suffix = get_modified_keywords_prompt(terms_dictionary)
     prompt = model.apply_model_template(instruction, suffix)
-    output = base_llm_generation(model, llm_collector, prompt, "flavored-request")
-
+    output = base_llm_generation(model, llm_collector, prompt, "flavored-keywords")
+    output["response"] = string_2_array(output["response"])
     return output
 
 

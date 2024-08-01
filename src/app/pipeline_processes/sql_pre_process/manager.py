@@ -3,6 +3,7 @@ from src.components.memory.memory import Memory
 from src.app.pipeline_processes.sql_pre_process.retrievers import (
     retrieve_semantic_term_definitions,
     retrieve_sql_semantic_information,
+    retrieve_sql_semantic_information_improved,
     retrieve_terms_examples,
 )
 from src.app.pipeline_processes.query_pre_process.manager import query_pre_process
@@ -25,17 +26,11 @@ from src.components.collector.collector import AppDataCollector, LLMResponseColl
 def complex_request_process_modification(
     llm: HF_Llama38b_LLM,
     embeddings: HF_MultilingualE5_Embeddings,
-    memory: Memory,
     collector: AppDataCollector,
     llm_collector: LLMResponseCollector,
 ):
-    # Parte 1: Resumiendo la conversacion
-    # output = generate_chat_summary(llm, memory, llm_collector)
-    # chat_summary = str(
-    #     collector.current_conversation_data.current_conversation_summary
-    # ).strip()
-
-    # Parte 2: Con los Slots y el request anterior generamos un request mas preciso
+    
+    # Parte 1: Con los Slots y el request generamos un request mas preciso
     output = generate_enhanced_request(llm, llm_collector, collector)
     user_request = output["response"]
     
@@ -44,12 +39,10 @@ def complex_request_process_modification(
     output = generate_technical_terms(llm, llm_collector, user_request, terms_examples)
     technical_terms = output["terms"]
 
-    # Parte 3: Recuperando definiciones para los terminos desde la bd vectorial (retrieval) para crear el diccionario
+    # Parte 3: Recuperando definiciones para los terminos (retrieval) para crear el diccionario
     terms_dictionary, has_replacement_definitions, _ = (
         retrieve_semantic_term_definitions(embeddings, technical_terms)
     )
-
-    modified_user_request = None
 
     if has_replacement_definitions:
         # Parte 5: Identificando posible multidefinicion y claridad del requerimiento
@@ -66,21 +59,16 @@ def complex_request_process_modification(
         # output = generate_flavored_request(
         #     llm, llm_collector, modified_user_request, terms_dictionary
         # )
-        output = generate_flavored_request(
-            llm, llm_collector, user_request, terms_dictionary
-        )
-        flavored_request_for_semantic_search = output["modified_sentence"]
-        modified_user_request = user_request
-        
+        output = generate_flavored_request(llm, llm_collector, terms_dictionary)
+        semantic_list_terms = output["response"]
     else:
-        flavored_request_for_semantic_search = user_request
-        modified_user_request = user_request
+        semantic_list_terms = technical_terms
 
     collector.terms_dictionary = terms_dictionary
     collector.technical_terms = technical_terms
-    collector.modified_user_request = modified_user_request
-    collector.flavored_request_for_semantic_search = (
-        flavored_request_for_semantic_search
+    collector.modified_user_request = user_request
+    collector.semantic_list_terms = (
+        semantic_list_terms
     )
 
     return collector
@@ -92,13 +80,14 @@ def complex_request_process_semantics(
     collector: AppDataCollector,
     llm_collector: LLMResponseCollector,
 ):
-    flavored_request = collector.flavored_request_for_semantic_search
+    kewywords_arr = collector.semantic_list_terms
     modified_request = collector.modified_user_request
+    
     # Busqueda semantica (retriever)
     semantic_tables, semantic_columns, semantic_relations_descriptions = (
-        retrieve_sql_semantic_information(flavored_request, embeddings)
+        retrieve_sql_semantic_information_improved(kewywords_arr, embeddings)
     )
-
+    
     semantic_info = generate_semantic_info(
         model=llm,
         llm_collector=llm_collector,

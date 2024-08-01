@@ -1,10 +1,12 @@
 import sys
 
+from src.utils.reader_utils import read_database_semantics
+
 sys.path.append("C:\\Users\\lauth\\OneDrive\\Desktop\\sql_assistant_v3")
 from experiments.utils.reader_utils import (
     read_database_experiments,
 )
-from src.utils.utils import clean_technical_term
+from src.utils.utils import clean_sentence, clean_technical_term
 from experiments.experiments_settings.settings import Experiments_Settings
 from src.components.models.embeddings.embeddings import (
     Langchain_OpenAI_Embeddings,
@@ -57,6 +59,15 @@ class ExperimentsIndexer:
             "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS": Config.get_experimentsdb_config()[
                 "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
             ],
+            "EXPERIMENTS_SEMANTIC_TABLES": Config.get_experimentsdb_config()[
+                "EXPERIMENTS_SEMANTIC_TABLES"
+            ],
+            "EXPERIMENTS_SEMANTIC_RELATIONS": Config.get_experimentsdb_config()[
+                "EXPERIMENTS_SEMANTIC_RELATIONS"
+            ],
+            "EXPERIMENTS_COLUMNS": Config.get_experimentsdb_config()[
+                "EXPERIMENTS_COLUMNS"
+            ],
         }
 
     def init_models(self):
@@ -79,6 +90,21 @@ class ExperimentsIndexer:
                 "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
             ]: lambda: self._delete_collection(
                 self.collection_names["EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"]
+            ),
+            self.collection_names[
+                "EXPERIMENTS_SEMANTIC_TABLES"
+            ]: lambda: self._delete_collection(
+                self.collection_names["EXPERIMENTS_SEMANTIC_TABLES"]
+            ),
+            self.collection_names[
+                "EXPERIMENTS_SEMANTIC_RELATIONS"
+            ]: lambda: self._delete_collection(
+                self.collection_names["EXPERIMENTS_SEMANTIC_RELATIONS"]
+            ),
+            self.collection_names[
+                "EXPERIMENTS_COLUMNS"
+            ]: lambda: self._delete_collection(
+                self.collection_names["EXPERIMENTS_COLUMNS"]
             ),
         }
         print("Selecciona una colección:")
@@ -226,7 +252,197 @@ class ExperimentsIndexer:
         )
         print("Colección llama_experiments entrenada!")
     
+    def train_table_definitions_collection(self):
+        # Leyendo el diccionario del excel
+        excel_data = read_database_semantics(sheet_name="semantic_tables_kw")
+        vectors = []
+        metadatas = []
+        ids = []
+        for index, row in excel_data.iterrows():
+            processed_word = clean_sentence(row["semantic_table_description"])
+            new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                processed_word
+            )
+            # new_embedding: list[float] = get_embeddings(
+            #     # row["semantic_table_description"],
+            #     processed_word,
+            #     self.openai_model,
+            #     self.settings.openai.embeddings_model,
+            # )
+            print(len(new_embedding))
+            vectors.append(new_embedding)
+            metadatas.append(
+                {
+                    "table_name": row["meta_table_name"],
+                    "table_schema": row["meta_table_schema"],
+                }
+            )
+            ids.append(f"id_table_definitions_col_{index}")
+        self.index_with_vectors(
+            collection_name=self.collection_names["EXPERIMENTS_SEMANTIC_TABLES"],
+            embeddings=vectors,
+            ids=ids,
+            metadatas=metadatas,
+            embedding_function=self.openai_embedding_function,
+        )
+        print("Colección table_definitions entrenada!")
 
+    def train_relations_definitions_collection(self):
+        # Leyendo el diccionario del excel
+        excel_df = read_database_semantics(
+            sheet_name="semantics_relations_kw",
+            cols=[
+                "semantic_table_relation",
+                "meta_table_1",
+                "meta_table_2",
+                "meta_k1",
+                "meta_k2",
+                "meta_mid_table",
+                "meta_mid_k1",
+                "meta_mid_k2",
+                "meta_relation_description",
+                "meta_mid_k2_description",
+                "meta_mid_k1_description",
+                "meta_k2_description",
+                "meta_k1_description",
+            ],
+        )
+        vectors = []
+        metadatas = []
+        ids = []
+        for index, row in excel_df.iterrows():
+            if not pd.isna(row["semantic_table_relation"]):
+                # processed_word = clean_sentence(row["semantic_table_relation"])
+                new_embedding: list[float] = self.openai_native_model.get_embeddings(
+                    row["semantic_table_relation"]
+                )
+                print(row["semantic_table_relation"])
+                # new_embedding: list[float] = get_embeddings(
+                #     row["semantic_table_relation"],
+                #     # processed_word,
+                #     self.openai_model,
+                #     self.settings.openai.embeddings_model,
+                # )
+                print(len(new_embedding))
+                vectors.append(new_embedding)
+                metadatas.append(
+                    {
+                        "table_1": row["meta_table_1"],
+                        "table_2": row["meta_table_2"],
+                        "key_table_1": row["meta_k1"],
+                        "key_table_2": row["meta_k2"],
+                        "mid_table": (
+                            ""
+                            if pd.isna(row["meta_mid_table"])
+                            else row["meta_mid_table"]
+                        ),
+                        "key_mid_table_1": (
+                            "" if pd.isna(row["meta_mid_k1"]) else row["meta_mid_k1"]
+                        ),
+                        "key_mid_table_2": (
+                            "" if pd.isna(row["meta_mid_k2"]) else row["meta_mid_k2"]
+                        ),
+                        "relation_description": (
+                            ""
+                            if pd.isna(row["meta_relation_description"])
+                            else row["meta_relation_description"]
+                        ),
+                        "key_mid_table_1_description": (
+                            ""
+                            if pd.isna(row["meta_mid_k1_description"])
+                            else row["meta_mid_k1_description"]
+                        ),
+                        "key_mid_table_2_description": (
+                            ""
+                            if pd.isna(row["meta_mid_k2_description"])
+                            else row["meta_mid_k2_description"]
+                        ),
+                        "key_table_1_description": (
+                            ""
+                            if pd.isna(row["meta_k1_description"])
+                            else row["meta_k1_description"]
+                        ),
+                        "key_table_2_description": (
+                            ""
+                            if pd.isna(row["meta_k2_description"])
+                            else row["meta_k2_description"]
+                        ),
+                    }
+                )
+                ids.append(f"id_relations_definitions_col_{index}")
+        self.index_with_vectors(
+            collection_name=self.collection_names["EXPERIMENTS_SEMANTIC_RELATIONS"],
+            embeddings=vectors,
+            ids=ids,
+            metadatas=metadatas,
+            embedding_function=self.openai_embedding_function,
+        )
+        print("Colección relations_definitions entrenada!")
+
+    def train_columns_definitions_collection(self):
+        # Leyendo el diccionario del excel
+        excel_df = read_database_semantics(
+            sheet_name="semantics_columns",
+            cols=[
+                "semantic_column",
+                "meta_table",
+                "meta_column_name",
+                "meta_column_type",
+                "meta_column_comment",
+                "meta_priority",
+            ],
+        )
+        vectors = []
+        metadatas = []
+        ids = []
+        for index, row in excel_df.iterrows():
+            if not pd.isna(row["semantic_column"]):
+                # processed_word = clean_sentence(row["semantic_table_relation"])
+                # new_embedding: list[float] = self.hf_model.get_embeddings(
+                #     row["semantic_column"]
+                # )
+                new_embedding = row["semantic_column"]
+                
+                vectors.append(new_embedding)
+                metadatas.append(
+                    {
+                        "meta_table": (
+                            "" if pd.isna(row["meta_table"]) else row["meta_table"]
+                        ),
+                        "meta_column_name": (
+                            ""
+                            if pd.isna(row["meta_column_name"])
+                            else row["meta_column_name"]
+                        ),
+                        "meta_column_type": (
+                            ""
+                            if pd.isna(row["meta_column_type"])
+                            else row["meta_column_type"]
+                        ),
+                        "meta_priority": (
+                            ""
+                            if pd.isna(row["meta_priority"])
+                            else row["meta_priority"]
+                        ),
+                        "meta_column_comment": (
+                            ""
+                            if pd.isna(row["meta_column_comment"])
+                            else row["meta_column_comment"]
+                        ),
+                    }
+                )
+                ids.append(f"id_columns_definitions_col_{index}")
+        self.index_with_documents(
+            collection_name=self.collection_names["EXPERIMENTS_COLUMNS"],
+            ids=ids,
+            # embedding_function=self.huggingface_embedding_function,
+            embedding_function=self.openai_embedding_function,
+            documents=vectors,
+            metadatas=metadatas,
+        )
+        print("Colección columns_definitions entrenada!")
+
+    
     def train_specific_collection(self):
         collection_names = {
             self.collection_names[
@@ -235,6 +451,15 @@ class ExperimentsIndexer:
             self.collection_names[
                 "EXPERIMENTS_COLLECTION_LLAMA_EMBEDDINGS"
             ]: lambda: self.train_llama_experiments_collection(),
+            self.collection_names[
+                "EXPERIMENTS_SEMANTIC_TABLES"
+            ]: lambda: self.train_table_definitions_collection(),
+            self.collection_names[
+                "EXPERIMENTS_SEMANTIC_RELATIONS"
+            ]: lambda: self.train_relations_definitions_collection(),
+            self.collection_names[
+                "EXPERIMENTS_COLUMNS"
+            ]: lambda: self.train_columns_definitions_collection(),
         }
         print("Selecciona una colección:")
         for i, collection_name in enumerate(collection_names):

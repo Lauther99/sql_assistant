@@ -46,3 +46,11 @@ class Config:
             "HF_META_LLAMA_LLAMA38B_MODEL": env("HF_META_LLAMA_LLAMA38B_MODEL"),
             "HF_INFLOAT_MLE5_EMBEDDINGS_MODEL": env("HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"),
         }
+        
+    @staticmethod
+    def get_mongo_config():
+        return {
+            "MONGODB_URL": env("MONGODB_URL"),
+            "MONGODB_DB_NAME": env("MONGODB_DB_NAME"),
+        }
+

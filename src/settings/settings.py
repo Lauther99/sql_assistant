@@ -9,8 +9,23 @@ import chromadb
 import chromadb.utils.embedding_functions as embedding_functions
 from chromadb.api.models.Collection import Collection
 import pyodbc
+from pymongo import database, MongoClient, collection
 
 import os
+
+
+class MongoDBSettings:
+    @staticmethod
+    def get_chats_collection() -> tuple[MongoClient, collection.Collection]:
+        mongo_url = Config.get_mongo_config()["MONGODB_URL"]
+        db_name = Config.get_mongo_config()["MONGODB_DB_NAME"]
+
+        mongo_client: MongoClient = MongoClient(mongo_url)
+        db = mongo_client[db_name]
+
+        c: collection.Collection = db.get_collection("chats")
+
+        return mongo_client, c
 
 
 class OpenAISettings:
@@ -164,15 +179,17 @@ class ChromaDBSetup:
     @staticmethod
     def get_terms_collection() -> Collection:
         """"""
-        
+
         api_key = Config.get_hf_config()["HF_KEY"]
-        embeddings_model_name = Config.get_hf_config()["HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"]
-        
+        embeddings_model_name = Config.get_hf_config()[
+            "HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"
+        ]
+
         collection_name = Config.get_chromadb_config()["TERMS_COLLECTION"]
-        
+
         chromadb_directory = Config.get_chromadb_config()["CHROMADB_DIRECTORY"]
         path = os.path.abspath(chromadb_directory)
-        
+
         embedding_function = embedding_functions.HuggingFaceEmbeddingFunction(
             api_key=api_key,
             model_name=embeddings_model_name,
@@ -182,12 +199,14 @@ class ChromaDBSetup:
             name=collection_name, embedding_function=embedding_function
         )
         return collection
-    
+
     @staticmethod
     def get_examples_terms_collection() -> Collection:
         """"""
         api_key = Config.get_hf_config()["HF_KEY"]
-        embeddings_model_name = Config.get_hf_config()["HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"]
+        embeddings_model_name = Config.get_hf_config()[
+            "HF_INFLOAT_MLE5_EMBEDDINGS_MODEL"
+        ]
 
         collection_name = Config.get_chromadb_config()["TERMS_EXAMPLES_COLLECTION"]
 
@@ -237,5 +256,4 @@ class Settings:
     Chroma = ChromaDBSetup
     Sql = SQLSettings
     Hugging_face = HFSettings
-
-
+    MongoDB = MongoDBSettings

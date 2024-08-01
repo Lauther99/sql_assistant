@@ -1,4 +1,3 @@
-
 from src.components.collector.collector import AppDataCollector, LLMResponseCollector
 from src.components.memory.memory import Memory
 from src.components.models.models_interfaces import Base_Embeddings, Base_LLM
@@ -56,7 +55,7 @@ def _simple_request_pipeline(
 
 
 def _complex_request_pipeline(
-    hf_llm: Base_LLM,
+    llama3_llm: Base_LLM,
     openai_llm: Base_LLM,
     mle5_embeddings: Base_Embeddings,
     openai_embeddings: Base_Embeddings,
@@ -67,9 +66,8 @@ def _complex_request_pipeline(
     try:
         print("complex_request_process_modification")
         complex_request_process_modification(
-            llm=hf_llm,
+            llm=llama3_llm,
             embeddings=mle5_embeddings,
-            memory=memory,
             collector=collector,
             llm_collector=llm_collector,
         )
@@ -80,7 +78,7 @@ def _complex_request_pipeline(
     try:
         print("complex_request_process_semantics")
         complex_request_process_semantics(
-            llm=hf_llm,
+            llm=llama3_llm,
             embeddings=openai_embeddings,
             collector=collector,
             llm_collector=llm_collector,
@@ -98,25 +96,26 @@ def _complex_request_pipeline(
         print(f"Error en: complex_request_sql_generation:\n {e}")
         traceback.print_exc()
 
-    try:
-        print("complex_request_sql_verification")
-        complex_request_sql_verification(
-            llm=hf_llm, collector=collector, llm_collector=llm_collector
-        )
-    except Exception as e:
-        print(f"Error en: complex_request_sql_verification:\n {e}")
-        traceback.print_exc()
+    # !Este es el prequery, hay que mejorar el prompt (puede funcionar con un fine tune)
+    # try:
+    #     print("complex_request_sql_verification")
+    #     complex_request_sql_verification(
+    #         llm=llama3_llm, collector=collector, llm_collector=llm_collector
+    #     )
+    # except Exception as e:
+    #     print(f"Error en: complex_request_sql_verification:\n {e}")
+    #     traceback.print_exc()
 
-    is_prequery = collector.assistant_sql_code_class.strip() == "incomplete"
-    if is_prequery:
-        try:
-            print("complex_request_pre_query_generation")
-            complex_request_pre_query_generation(
-                llm=openai_llm, collector=collector, llm_collector=llm_collector
-            )
-        except Exception as e:
-            print(f"Error en: complex_request_pre_query_generation:\n {e}")
-            traceback.print_exc()
+    # is_prequery = collector.assistant_sql_code_class.strip() == "incomplete"
+    # if is_prequery:
+    #     try:
+    #         print("complex_request_pre_query_generation")
+    #         complex_request_pre_query_generation(
+    #             llm=openai_llm, collector=collector, llm_collector=llm_collector
+    #         )
+    #     except Exception as e:
+    #         print(f"Error en: complex_request_pre_query_generation:\n {e}")
+    #         traceback.print_exc()
 
 
 def _post_sql_generation_pipeline(
@@ -182,6 +181,3 @@ def _post_process_pipeline(
     except Exception as e:
         print(f"Error al ejecutar query_post_process\n{e}")
         traceback.print_exc()
-
-
-
