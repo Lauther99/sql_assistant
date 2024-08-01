@@ -75,7 +75,7 @@ class ChatDocument(ABC):
         )
         document.conversation_slots = data.get("conversation_slots")
         document.last_interaction = (
-            datetime.fromisoformat(data.get("last_interaction"))
+            datetime.fromisoformat(data.get("last_interaction")).isoformat()
             if data.get("last_interaction")
             else None
         )
@@ -99,7 +99,7 @@ class ChatDocument(ABC):
             f"last_user_message={self.last_user_message},\n"
             f"last_assistant_message={self.last_assistant_message},\n"
             f"conversation_slots={self.conversation_slots},\n"
-            f"last_interaction={self.last_interaction},\n"
+            f"last_interaction={self.last_interaction.isoformat()},\n"
             f"current_summary={self.current_summary})"
         )
         

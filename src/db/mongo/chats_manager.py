@@ -28,9 +28,11 @@ def find_chat_by_id(chat_id: uuid.UUID):
 
     try:
         chat = collection.find_one({"conversation_id": str(chat_id)})
-        print("Chat has been found")
-        chat_document = ChatDocument.parse_dict_to_document(chat)
-        return chat_document
+        if chat is not None:
+            print("Chat has been found")
+            chat_document = ChatDocument.parse_dict_to_document(chat)
+            return chat_document
+        print("No se encontró ningún chat")
 
     except Exception as e:
         print(f"Error durante la conexion: {e}")
@@ -41,14 +43,15 @@ def find_chat_by_id(chat_id: uuid.UUID):
 
 def save_to_chat(new_data: ChatDocument):
     client, collection = Settings.MongoDB.get_chats_collection()
-    
+
     conversation_id = new_data.conversation_id
-    
+
     chat_dict = new_data.chat_document_to_dict()
     del chat_dict["user_id"]
     del chat_dict["conversation_id"]
 
     try:
+        print("Guardando chat ...")
         collection.update_one(
             {"conversation_id": str(conversation_id)}, {"$set": chat_dict}, upsert=True
         )

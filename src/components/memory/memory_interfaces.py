@@ -33,7 +33,7 @@ class Base_Message(ABC):
         if 'message_id' in data:
             data['message_id'] = uuid.UUID(data['message_id'])
         if 'date_created' in data:
-            data['date_created'] = datetime.fromisoformat(data['date_created'])
+            data['date_created'] = datetime.fromisoformat(data['date_created']).isoformat()
 
         # Pasar solo las claves que el constructor espera
         field_names = cls.__init__.__code__.co_varnames[1:cls.__init__.__code__.co_argcount]
@@ -90,7 +90,7 @@ class AIMessage(Base_Message):
             f"  message_id={self.message_id!r},\n"
             f"  message={self.message!r},\n"
             f"  message_type={self.message_type!r},\n"
-            f"  date_created={self.date_created!r},\n"
+            f"  date_created={self.date_created.isoformat()!r},\n"
             f"  sql_response={self.sql_response!r},\n"
             f"  dataframe={self.dataframe if self.dataframe is None else 'DataFrame(...)'},\n"
             f")"
@@ -112,6 +112,6 @@ class HumanMessage(Base_Message):
             f"  message_id={self.message_id!r},\n"
             f"  message={self.message!r},\n"
             f"  message_type={self.message_type!r},\n"
-            f"  date_created={self.date_created!r}\n"
+            f"  date_created={self.date_created.isoformat()!r}\n"
             f")"
         )
