@@ -1,7 +1,8 @@
 from src.settings.settings import Settings
 from src.db.mongo.interfaces import ChatDocument
 import uuid
-
+import traceback
+import datetime
 
 def create_new_chat(user_id: uuid.UUID):
     client, collection = Settings.MongoDB.get_chats_collection()
@@ -9,6 +10,7 @@ def create_new_chat(user_id: uuid.UUID):
     new_chat = ChatDocument()
     new_chat.user_id = user_id
     new_chat.conversation_id = uuid.uuid4()
+    new_chat.last_interaction = datetime.datetime.now()
 
     new_chat_document = new_chat.chat_document_to_dict()
     try:
@@ -17,7 +19,7 @@ def create_new_chat(user_id: uuid.UUID):
         return new_chat.conversation_id
     except Exception as e:
         print(f"Error durante la conexion: {e}")
-
+        traceback.print_exc()
     finally:
         client.close()
         print("Conexion finalizada")
@@ -36,6 +38,7 @@ def find_chat_by_id(chat_id: uuid.UUID):
 
     except Exception as e:
         print(f"Error durante la conexion: {e}")
+        traceback.print_exc()
     finally:
         client.close()
         print("Conexion finalizada")
@@ -59,6 +62,7 @@ def save_to_chat(new_data: ChatDocument):
 
     except Exception as e:
         print(f"Error durante la conexion: {e}")
+        traceback.print_exc()
     finally:
         client.close()
         print("Conexion finalizada")

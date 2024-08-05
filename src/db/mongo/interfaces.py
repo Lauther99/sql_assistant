@@ -47,7 +47,7 @@ class ChatDocument(ABC):
             ),
             "conversation_slots": self.conversation_slots,
             "last_interaction": (
-                self.last_interaction.isoformat() if self.last_interaction else None
+                self.last_interaction.isoformat() if isinstance(self.last_interaction, datetime) else datetime.now().isoformat()
             ),
             "current_summary": self.current_summary,
         }
