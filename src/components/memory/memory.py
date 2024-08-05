@@ -146,22 +146,27 @@ class Memory:
 
     def list_chat_messages(self):
         new_lines: str = ""
-        if len(self.chat_memory) > 0:
-            for message in self.chat_memory:
-                if message.message_type == MEMORY_TYPES["HUMAN"]:
-                    message_content = message.message
-                    new_lines += (
-                        f"\n<Human>: {message.date_created}\n{message_content}"
-                    )
-                elif message.message_type == MEMORY_TYPES["AI"]:
-                    if message.dataframe is not None:
-                        new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}\nHere is a dataframe from SQL: \n{pd.DataFrame(message.dataframe).head(10).to_markdown()}"
+        try:
+            if len(self.chat_memory) > 0:
+                for message in self.chat_memory:
+                    if message.message_type == MEMORY_TYPES["HUMAN"]:
+                        message_content = message.message
+                        new_lines += (
+                            f"\n<Human>: {message.date_created}\n{message_content}"
+                        )
+                    elif message.message_type == MEMORY_TYPES["AI"]:
+                        if message.dataframe is not None:
+                            new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}\nHere is a dataframe from SQL: \n{pd.DataFrame(message.dataframe).head(10).to_markdown()}"
+                        else:
+                            new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}"
                     else:
-                        new_lines += f"\n<Assistant>: {message.date_created}\n{message.message}"
-                else:
-                    message_type = message.message_type
-                    raise ValueError(f"Not support message type: {message_type}")
-        else:
-            raise ValueError("Not messages found in the current conversation")
+                        message_type = message.message_type
+                        raise ValueError(f"Not support message type: {message_type}")
+            else:
+                raise ValueError("Not messages found in the current conversation")
+            return new_lines
+        except Exception as e:
+            print(e)
+            return new_lines
 
-        return new_lines
+        

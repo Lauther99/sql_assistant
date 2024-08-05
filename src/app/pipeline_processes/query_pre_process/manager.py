@@ -31,7 +31,7 @@ def query_pre_process(
     
     output = generate_enhanced_request(llm, llm_collector, collector)
     user_request = output["response"]
-
+    collector.modified_user_request = user_request
 
     # Clasificando el request --- Parte 1: Recuperando ejemplos de la db
     classify_examples = retrieve_classify_examples(user_request)

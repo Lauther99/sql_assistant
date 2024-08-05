@@ -30,9 +30,10 @@ def complex_request_process_modification(
     llm_collector: LLMResponseCollector,
 ):
     
-    # Parte 1: Con los Slots y el request generamos un request mas preciso
-    output = generate_enhanced_request(llm, llm_collector, collector)
-    user_request = output["response"]
+    # Parte 1: Obtenemos el user request del collector
+    # output = generate_enhanced_request(llm, llm_collector, collector)
+    # user_request = output["response"]
+    user_request = collector.modified_user_request
     
     # Parte 2: Encontrando y generando terminos tecnicos de la conversacion
     terms_examples = retrieve_terms_examples(user_request, embeddings)
@@ -69,7 +70,6 @@ def complex_request_process_modification(
 
     collector.terms_dictionary = terms_dictionary
     collector.technical_terms = technical_terms
-    collector.modified_user_request = user_request
     collector.semantic_list_terms = (
         semantic_list_terms
     )

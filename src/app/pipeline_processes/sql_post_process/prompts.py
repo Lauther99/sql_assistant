@@ -133,7 +133,7 @@ But you can explain understandable filters like dates or status.
 Output format response:
 The output should be formatted with the key format below. Do not add anything beyond the key format.
 Start Key format:
-"response" is the key and its content is: Brief analysis for normal user.
+"response" is the key and its content is: Brief analysis for normal user in one line, do not make line breaks.
 End of Key format
 
 Begin!"""
