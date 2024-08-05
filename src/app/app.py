@@ -110,11 +110,16 @@ def chat(
     )
     collector.current_conversation_data.last_ai_message = last_ai_message
 
-    
     chat_document.last_user_message = collector.current_conversation_data.last_user_message
     chat_document.last_assistant_message = collector.current_conversation_data.last_ai_message
-    chat_document.conversation_slots = collector.current_conversation_data.current_slots
     chat_document.last_interaction = datetime.now()
-    chat_document.current_summary = collector.current_conversation_data.current_conversation_summary
+    
+    if len(chat_document.messages) >= 8:
+        chat_document.conversation_slots = collector.current_conversation_data.current_slots
+        chat_document.current_summary = collector.current_conversation_data.current_conversation_summary
+    else:
+        chat_document.conversation_slots = None
+        chat_document.current_summary = None
+        
 
     return llm_collector, collector, chat_document

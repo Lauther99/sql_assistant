@@ -101,49 +101,62 @@ class Memory:
         self.chat_memory.append(ai_message)
         return ai_message
 
+    # def get_new_summary_instruction(
+    #     self,
+    #     user_message: HumanMessage,
+    #     ai_message: AIMessage = None,
+    #     current_summary: str = None,
+    #     current_slots: str = None,
+    # ):
+    #     current_summary = "The next is a conversation between Assistant and Human." if current_summary is None else current_summary
+    #     new_lines = ""
+    #     if ai_message is None:
+    #         new_lines = f"""<User>{user_message.message}</User>"""
+    #     else:
+    #         if ai_message.dataframe is not None:
+    #             new_lines = f"""<Assistant>\n{ai_message.message}\nHere is a dataframe: \n{pd.DataFrame(ai_message.dataframe).head(10)}\n</Assistant>\n<User>{user_message.message}</User>"""
+    #         else:
+    #             new_lines = f"""<Assistant>{ai_message.message}</Assistant>\n<User>{user_message.message}</User>"""
+
+    #     instruction = summary_instruction_no_dictionary.format(
+    #         current_summary=current_summary,
+    #         current_slots=current_slots,
+    #         chat_history=new_lines,
+    #     )
+        
+    #     suffix = summary_instruction_suffix
+    #     return instruction, suffix
     def get_new_summary_instruction(
         self,
-        user_message: HumanMessage,
-        ai_message: AIMessage = None,
-        current_summary: str = None,
-        current_slots: str = None,
-        dictionary = None,
+        current_summary: str | None = None,
+        current_slots: str | None = None,
     ):
-        current_summary = "The next is a conversation between Assistant and Human." if current_summary is None else current_summary
-        new_lines = ""
-        if ai_message is None:
-            new_lines = f"""<User>{user_message.message}</User>"""
-        else:
-            if ai_message.dataframe is not None:
-                new_lines = f"""<Assistant>\n{ai_message.message}\nHere is a dataframe: \n{pd.DataFrame(ai_message.dataframe).head(10)}\n</Assistant>\n<User>{user_message.message}</User>"""
-            else:
-                new_lines = f"""<Assistant>{ai_message.message}</Assistant>\n<User>{user_message.message}</User>"""
-
-        if dictionary is not None:
-            definitions = []
-            for item in dictionary:
-                for inner_item in item["definitions"]:
-                    definitions.append(str(inner_item["definition"]).strip())
-            terms = "    - "
-            content = "\n    - ".join(definitions)
-            terms += f"{content}\n"
-                
-            instruction = summary_instruction_with_dictionary.format(
-                current_summary=current_summary,
-                current_slots=current_slots,
-                chat_history=new_lines,
-                dictionary=terms
-            )
-        else:
-            instruction = summary_instruction_no_dictionary.format(
-                current_summary=current_summary,
-                current_slots=current_slots,
-                chat_history=new_lines,
-            )
+        current_summary = (
+            "The next is a conversation between Assistant and Human."
+            if current_summary is None
+            else current_summary
+        )
+        messages_sorted = sorted(self.chat_memory, key=lambda x: x.date_created)
         
+        new_lines = ""
+        for m in messages_sorted[-8:]:
+            if isinstance(m, HumanMessage):
+                new_lines += f"""\n<User>{m.message}</User>"""
+            elif isinstance(m, AIMessage):
+                if m.dataframe is not None:
+                    new_lines += f"""\n<Assistant>\n{m.message}\nHere is a dataframe: \n{pd.DataFrame(m.dataframe).head(10)}"""
+                else:
+                    new_lines += f"""\n<Assistant>\n{m.message}\n</Assistant>"""
+
+        instruction = summary_instruction_no_dictionary.format(
+            current_summary=current_summary,
+            current_slots=current_slots,
+            chat_history=new_lines,
+        )
+
         suffix = summary_instruction_suffix
         return instruction, suffix
-
+    
     def list_chat_messages(self):
         new_lines: str = ""
         try:

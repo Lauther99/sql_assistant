@@ -35,20 +35,14 @@ def generate_request(
     }
     ```
     """
-    user_message = collector.current_conversation_data.last_user_message
-    ai_message = collector.current_conversation_data.last_ai_message
-    dictionary = collector.terms_dictionary
     current_slots = collector.current_conversation_data.current_slots
     current_conversation_summary = (
         collector.current_conversation_data.current_conversation_summary
     )
 
     instruction, suffix = memory.get_new_summary_instruction(
-        user_message=user_message,
-        ai_message=ai_message,
         current_slots=current_slots,
         current_summary=current_conversation_summary,
-        dictionary=dictionary
     )
     
     prompt = model.apply_model_template(instruction, suffix)

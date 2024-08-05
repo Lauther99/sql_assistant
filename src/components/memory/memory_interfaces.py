@@ -86,7 +86,7 @@ class AIMessage(Base_Message):
     def __repr__(self):
         return (
             f"AIMessage(\n"
-            f"  replied_user_message_id={self.replied_user_message_id!r}\n"
+            f"  replied_user_message_id={self.replied_user_message_id!r},\n"
             f"  message_id={self.message_id!r},\n"
             f"  message={self.message!r},\n"
             f"  message_type={self.message_type!r},\n"
